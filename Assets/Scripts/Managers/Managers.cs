@@ -2,6 +2,7 @@ using UnityEngine;
 
 public static class Managers
 {
+    public static InputManager Input => GetInstance(InputManager.Instance);
     public static PoolManager Pool => GetInstance(PoolManager.Instance);
     public static ResourceManager Resource => GetInstance(ResourceManager.Instance);
 
@@ -14,17 +15,19 @@ public static class Managers
             return;
         }
 
-        var managers = new GameObject("Managers");
-        Object.DontDestroyOnLoad(managers);
-
-        PoolManager.Instance.transform.SetParent(managers.transform);
-        ResourceManager.Instance.transform.SetParent(managers.transform);
-
         _initialized = true;
+
+        var root = new GameObject("Managers").transform;
+        Object.DontDestroyOnLoad(root);
+
+        Input.transform.SetParent(root);
+        Pool.transform.SetParent(root);
+        Resource.transform.SetParent(root);
     }
 
     public static void Clear()
     {
+        Input.Clear();
         Pool.Clear();
         Resource.Clear();
     }

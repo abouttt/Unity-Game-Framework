@@ -113,6 +113,12 @@ public sealed class PoolManager : MonoBehaviourSingleton<PoolManager>
     [SerializeField, ReadOnly, SerializedDictionary("Tag", "Pool")]
     private SerializedDictionary<string, Pool> _pools = new();
 
+    protected override void Dispose()
+    {
+        base.Dispose();
+        Clear();
+    }
+
     public void CreatePool(GameObject prefab, int count = 3, string tag = null)
     {
         if (string.IsNullOrEmpty(tag))
@@ -211,11 +217,5 @@ public sealed class PoolManager : MonoBehaviourSingleton<PoolManager>
         }
 
         _pools.Clear();
-    }
-
-    protected override void Dispose()
-    {
-        base.Dispose();
-        Clear();
     }
 }

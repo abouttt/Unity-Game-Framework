@@ -10,6 +10,18 @@ public sealed class ResourceManager : MonoBehaviourSingleton<ResourceManager>
     [SerializeField, ReadOnly, SerializedDictionary("Key", "Resource")]
     private SerializedDictionary<string, Object> _resources = new();
 
+    protected override void Init()
+    {
+        base.Init();
+        Addressables.InitializeAsync();
+    }
+
+    protected override void Dispose()
+    {
+        base.Dispose();
+        Clear();
+    }
+
     public void LoadAsync<T>(string key, Action<T> callback = null) where T : Object
     {
         if (_resources.TryGetValue(key, out var resource))
@@ -111,17 +123,5 @@ public sealed class ResourceManager : MonoBehaviourSingleton<ResourceManager>
         }
 
         _resources.Clear();
-    }
-
-    protected override void Init()
-    {
-        base.Init();
-        Addressables.InitializeAsync();
-    }
-
-    protected override void Dispose()
-    {
-        base.Dispose();
-        Clear();
     }
 }

@@ -33,6 +33,20 @@ public sealed class InputManager : MonoBehaviourSingleton<InputManager>
     private InputActions _inputActions;
     private bool _cursorLocked;
 
+    protected override void Init()
+    {
+        base.Init();
+        _inputActions = new();
+        Enabled = false;
+        CursorLocked = false;
+    }
+
+    protected override void Dispose()
+    {
+        base.Dispose();
+        _inputActions.Dispose();
+    }
+
     public InputActionMap GetActionMap(string nameOrId, bool throwIfNotFound = false)
     {
         return _inputActions.asset.FindActionMap(nameOrId, throwIfNotFound);
@@ -54,19 +68,5 @@ public sealed class InputManager : MonoBehaviourSingleton<InputManager>
     public void Clear()
     {
         Enabled = false;
-    }
-
-    protected override void Init()
-    {
-        base.Init();
-        _inputActions = new();
-        Enabled = false;
-        CursorLocked = false;
-    }
-
-    protected override void Dispose()
-    {
-        base.Dispose();
-        _inputActions.Dispose();
     }
 }

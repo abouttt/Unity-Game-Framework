@@ -26,7 +26,7 @@ public sealed class SoundManager : MonoBehaviourSingleton<SoundManager>
     {
         base.Init();
 
-        _audioMixer = Resources.Load<AudioMixer>("Audio/AudioMixer");
+        _audioMixer = Resources.Load<AudioMixer>("AudioMixer");
 
         foreach (var typeName in Enum.GetNames(typeof(SoundType)))
         {

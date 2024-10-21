@@ -10,20 +10,19 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: bbb281ee3bf0b054c82ac2347e9e782c, type: 3}
-  m_Name: Default Local Group
+  m_Name: Scene Group
   m_EditorClassIdentifier: 
-  m_GroupName: Default Local Group
-  m_GUID: eaa11d8a21e09584793f69e32688c6f5
+  m_GroupName: Scene Group
+  m_GUID: 8b2d58ebbe9ac25408fa968b689f58a9
   m_SerializeEntries:
-  - m_GUID: a80a63d07fe0a8a4197ac82a0185f51f
-    m_Address: EventSystem.prefab
+  - m_GUID: 99c9720ab356a0642a771bea13969a05
+    m_Address: DevScene.unity
     m_ReadOnly: 0
-    m_SerializedLabels:
-    - Default
+    m_SerializedLabels: []
     FlaggedDuringContentUpdateRestriction: 0
   m_ReadOnly: 0
   m_Settings: {fileID: 11400000, guid: 899943787b203934abbf9306b8e13b2d, type: 2}
   m_SchemaSet:
     m_Schemas:
-    - {fileID: 11400000, guid: c656ddc46f2dd124abc69b2ffeca5925, type: 2}
-    - {fileID: 11400000, guid: b06195d109e3ff64180c6be05826a07f, type: 2}
+    - {fileID: 11400000, guid: b95df0f476316fc4a8005604b6fb6976, type: 2}
+    - {fileID: 11400000, guid: 2ecb0a6567ba0364c92ca7c8af9cd359, type: 2}

@@ -7,6 +7,8 @@ using Object = UnityEngine.Object;
 
 public sealed class ResourceManager : MonoBehaviourSingleton<ResourceManager>
 {
+    public int Count => _resources.Count;
+
     [SerializeField, ReadOnly, SerializedDictionary("Key", "Resource")]
     private SerializedDictionary<string, Object> _resources = new();
 

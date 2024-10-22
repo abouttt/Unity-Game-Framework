@@ -516,8 +516,6 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   <SceneAddress>k__BackingField: DevScene.unity
   _bgm: {fileID: 0}
-  _defaultPosition: {x: 0, y: 0, z: 0}
-  _defalutRotationYaw: 0
 --- !u!1001 &6904165038081214365
 PrefabInstance:
   m_ObjectHideFlags: 0

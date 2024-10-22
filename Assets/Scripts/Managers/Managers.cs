@@ -7,6 +7,7 @@ public static class Managers
     public static ResourceManager Resource => GetInstance(ResourceManager.Instance);
     public static SceneManagerEx Scene => GetInstance(SceneManagerEx.Instance);
     public static SoundManager Sound => GetInstance(SoundManager.Instance);
+    public static UIManager UI => GetInstance(UIManager.Instance);
 
     private static bool _initialized;
 
@@ -27,6 +28,7 @@ public static class Managers
         Resource.transform.SetParent(root);
         Scene.transform.SetParent(root);
         Sound.transform.SetParent(root);
+        UI.transform.SetParent(root);
     }
 
     public static void Clear()
@@ -35,6 +37,7 @@ public static class Managers
         Pool.Clear();
         Resource.Clear();
         Sound.Clear();
+        UI.Clear();
     }
 
     private static T GetInstance<T>(T instance) where T : MonoBehaviourSingleton<T>

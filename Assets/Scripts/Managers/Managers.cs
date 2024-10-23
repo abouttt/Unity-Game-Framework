@@ -2,6 +2,7 @@ using UnityEngine;
 
 public static class Managers
 {
+    public static DataManager Data => GetInstance(DataManager.Instance);
     public static InputManager Input => GetInstance(InputManager.Instance);
     public static PoolManager Pool => GetInstance(PoolManager.Instance);
     public static ResourceManager Resource => GetInstance(ResourceManager.Instance);
@@ -23,6 +24,7 @@ public static class Managers
         var root = new GameObject("Managers").transform;
         Object.DontDestroyOnLoad(root);
 
+        Data.transform.SetParent(root);
         Input.transform.SetParent(root);
         Pool.transform.SetParent(root);
         Resource.transform.SetParent(root);

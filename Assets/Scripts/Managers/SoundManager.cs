@@ -21,6 +21,7 @@ public sealed class SoundManager : MonoBehaviourSingleton<SoundManager>
     private AudioMixer _audioMixer;
 
     private readonly List<AudioSource> _audioSources = new();
+    private GameObject _dddSoundPlayerPrefab;
 
     protected override void Init()
     {
@@ -52,6 +53,8 @@ public sealed class SoundManager : MonoBehaviourSingleton<SoundManager>
         }
 
         _audioSources[(int)SoundType.BGM].loop = true;
+
+        ResourceManager.Instance.LoadAsync<GameObject>("DDDSoundPlayer.prefab", prefab => _dddSoundPlayerPrefab = prefab);
     }
 
     public void Play2D(string key, SoundType soundType)
@@ -108,6 +111,7 @@ public sealed class SoundManager : MonoBehaviourSingleton<SoundManager>
         var go = PoolManager.Instance.Get("DDDSoundPlayer");
         if (go == null)
         {
+<<<<<<< Updated upstream
             ResourceManager.Instance.LoadAsync<GameObject>("DDDSoundPlayer.prefab", prefab =>
             {
                 PoolManager.Instance.CreatePool(prefab);
@@ -120,7 +124,14 @@ public sealed class SoundManager : MonoBehaviourSingleton<SoundManager>
         {
             var soundPlayer = go.GetComponent<DDDSoundPlayer>();
             soundPlayer.Play(clip, position, parent, minDistance, maxDistance);
+=======
+            PoolManager.Instance.CreatePool(_dddSoundPlayerPrefab);
+            go = PoolManager.Instance.Get("DDDSoundPlayer");
+>>>>>>> Stashed changes
         }
+
+        var soundPlayer = go.GetComponent<DDDSoundPlayer>();
+        soundPlayer.Play(clip, position, parent, minDistance, maxDistance);
     }
 
     public float GetVolume(SoundType soundType)

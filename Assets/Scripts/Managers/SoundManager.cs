@@ -56,11 +56,16 @@ public sealed class SoundManager : MonoBehaviourSingleton<SoundManager>
 
     public void Play2D(string key, SoundType soundType)
     {
-        ResourceManager.Instance.LoadAsync<AudioClip>(key, audioClip => Play2D(audioClip, soundType));
+        ResourceManager.Instance.LoadAsync<AudioClip>(key, clip => Play2D(clip, soundType));
     }
 
-    public void Play2D(AudioClip audioClip, SoundType soundType)
+    public void Play2D(AudioClip clip, SoundType soundType)
     {
+        if (clip == null)
+        {
+            return;
+        }
+
         var audioSource = _audioSources[(int)soundType];
 
         if (soundType == SoundType.BGM)
@@ -70,12 +75,12 @@ public sealed class SoundManager : MonoBehaviourSingleton<SoundManager>
                 audioSource.Stop();
             }
 
-            audioSource.clip = audioClip;
+            audioSource.clip = clip;
             audioSource.Play();
         }
         else
         {
-            audioSource.PlayOneShot(audioClip);
+            audioSource.PlayOneShot(clip);
         }
     }
 
@@ -95,6 +100,11 @@ public sealed class SoundManager : MonoBehaviourSingleton<SoundManager>
 
     public void Play3D(AudioClip clip, Vector3 position, Transform parent = null, float minDistance = 0f, float maxDistance = 15f)
     {
+        if (clip == null)
+        {
+            return;
+        }
+
         var go = PoolManager.Instance.Get("DDDSoundPlayer");
         if (go == null)
         {

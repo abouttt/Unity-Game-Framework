@@ -111,23 +111,8 @@ public sealed class SoundManager : MonoBehaviourSingleton<SoundManager>
         var go = PoolManager.Instance.Get("DDDSoundPlayer");
         if (go == null)
         {
-<<<<<<< Updated upstream
-            ResourceManager.Instance.LoadAsync<GameObject>("DDDSoundPlayer.prefab", prefab =>
-            {
-                PoolManager.Instance.CreatePool(prefab);
-                go = PoolManager.Instance.Get("DDDSoundPlayer");
-                var soundPlayer = go.GetComponent<DDDSoundPlayer>();
-                soundPlayer.Play(clip, position, parent, minDistance, maxDistance);
-            });
-        }
-        else
-        {
-            var soundPlayer = go.GetComponent<DDDSoundPlayer>();
-            soundPlayer.Play(clip, position, parent, minDistance, maxDistance);
-=======
             PoolManager.Instance.CreatePool(_dddSoundPlayerPrefab);
             go = PoolManager.Instance.Get("DDDSoundPlayer");
->>>>>>> Stashed changes
         }
 
         var soundPlayer = go.GetComponent<DDDSoundPlayer>();

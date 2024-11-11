@@ -215,6 +215,11 @@ public sealed class PoolManager : MonoBehaviourSingleton<PoolManager>
         }
     }
 
+    public bool Contains(string tag)
+    {
+        return _pools.ContainsKey(tag);
+    }
+
     public void Clear()
     {
         foreach (var kvp in _pools)

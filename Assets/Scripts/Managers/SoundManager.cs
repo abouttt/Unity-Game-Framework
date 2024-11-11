@@ -27,6 +27,10 @@ public sealed class SoundManager : MonoBehaviourSingleton<SoundManager>
         base.Init();
 
         _audioMixer = Resources.Load<AudioMixer>("AudioMixer");
+        if (_audioMixer == null)
+        {
+            Debug.LogWarning($"[SoundManager.Init] AudioMixer does not exist. Create an audio mixer in the Resources folder.");
+        }
 
         foreach (var typeName in Enum.GetNames(typeof(SoundType)))
         {
@@ -34,7 +38,15 @@ public sealed class SoundManager : MonoBehaviourSingleton<SoundManager>
             go.transform.SetParent(transform);
 
             var audioSource = go.AddComponent<AudioSource>();
-            audioSource.outputAudioMixerGroup = _audioMixer.FindMatchingGroups(typeName)[0];
+            var group = _audioMixer.FindMatchingGroups(typeName);
+            if (group.Length > 0)
+            {
+                audioSource.outputAudioMixerGroup = group[0];
+            }
+            else
+            {
+                Debug.LogWarning($"[SoundManager.Init] {typeName} audio mixer group does not exist.");
+            }
 
             _audioSources.Add(audioSource);
         }
@@ -69,7 +81,11 @@ public sealed class SoundManager : MonoBehaviourSingleton<SoundManager>
 
     public void Stop2D(SoundType soundType)
     {
-        _audioSources[(int)soundType].Stop();
+        var audioSource = _audioSources[(int)soundType];
+        if (audioSource.isPlaying)
+        {
+            audioSource.Stop();
+        }
     }
 
     public void Play3D(string key, Vector3 position, Transform parent = null, float minDistance = 0f, float maxDistance = 15f)
@@ -79,21 +95,22 @@ public sealed class SoundManager : MonoBehaviourSingleton<SoundManager>
 
     public void Play3D(AudioClip clip, Vector3 position, Transform parent = null, float minDistance = 0f, float maxDistance = 15f)
     {
-        var go = new GameObject("3D Sound Player");
-        go.transform.SetParent(parent);
-        go.transform.localPosition = position;
-
-        var audioSource = go.AddComponent<AudioSource>();
-        audioSource.clip = clip;
-        audioSource.outputAudioMixerGroup = _audioMixer.FindMatchingGroups(SoundType.SFX.ToString())[0];
-        audioSource.spatialBlend = 1f;
-        audioSource.dopplerLevel = 0f;
-        audioSource.rolloffMode = AudioRolloffMode.Linear;
-        audioSource.minDistance = minDistance;
-        audioSource.maxDistance = maxDistance;
-        audioSource.Play();
-
-        Destroy(go, clip.length * ((Time.timeScale < 0.01f) ? 0.01f : Time.timeScale));
+        var go = PoolManager.Instance.Get("DDDSoundPlayer");
+        if (go == null)
+        {
+            ResourceManager.Instance.LoadAsync<GameObject>("DDDSoundPlayer.prefab", prefab =>
+            {
+                PoolManager.Instance.CreatePool(prefab);
+                go = PoolManager.Instance.Get("DDDSoundPlayer");
+                var soundPlayer = go.GetComponent<DDDSoundPlayer>();
+                soundPlayer.Play(clip, position, parent, minDistance, maxDistance);
+            });
+        }
+        else
+        {
+            var soundPlayer = go.GetComponent<DDDSoundPlayer>();
+            soundPlayer.Play(clip, position, parent, minDistance, maxDistance);
+        }
     }
 
     public float GetVolume(SoundType soundType)
@@ -113,6 +130,8 @@ public sealed class SoundManager : MonoBehaviourSingleton<SoundManager>
             audioSource.Stop();
             audioSource.clip = null;
         }
+
+        PoolManager.Instance.ClearPool("DDDSoundPlayer");
     }
 
     private float GetVolume(string name)

@@ -108,7 +108,7 @@ public sealed class SoundManager : MonoBehaviourSingleton<SoundManager>
         var go = PoolManager.Instance.Get("DDDSoundPlayer");
         if (go == null)
         {
-            ResourceManager.Instance.LoadAsync<GameObject>("DDDSoundPlayer", prefab =>
+            ResourceManager.Instance.LoadAsync<GameObject>("DDDSoundPlayer.prefab", prefab =>
             {
                 PoolManager.Instance.CreatePool(prefab);
                 go = PoolManager.Instance.Get("DDDSoundPlayer");

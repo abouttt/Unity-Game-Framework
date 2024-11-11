@@ -21,6 +21,7 @@ public sealed class SoundManager : MonoBehaviourSingleton<SoundManager>
     private AudioMixer _audioMixer;
 
     private readonly List<AudioSource> _audioSources = new();
+    private readonly Dictionary<SoundType, string> _typeNames = new();
     private GameObject _dddSoundPlayerPrefab;
 
     protected override void Init()
@@ -33,8 +34,10 @@ public sealed class SoundManager : MonoBehaviourSingleton<SoundManager>
             Debug.LogWarning($"[SoundManager.Init] AudioMixer does not exist. Create an audio mixer in the Resources folder.");
         }
 
-        foreach (var typeName in Enum.GetNames(typeof(SoundType)))
+        foreach (SoundType type in Enum.GetValues(typeof(SoundType)))
         {
+            string typeName = type.ToString();
+
             var go = new GameObject(typeName);
             go.transform.SetParent(transform);
 
@@ -50,6 +53,7 @@ public sealed class SoundManager : MonoBehaviourSingleton<SoundManager>
             }
 
             _audioSources.Add(audioSource);
+            _typeNames.Add(type, typeName);
         }
 
         _audioSources[(int)SoundType.BGM].loop = true;
@@ -57,21 +61,21 @@ public sealed class SoundManager : MonoBehaviourSingleton<SoundManager>
         ResourceManager.Instance.LoadAsync<GameObject>("DDDSoundPlayer.prefab", prefab => _dddSoundPlayerPrefab = prefab);
     }
 
-    public void Play2D(string key, SoundType soundType)
+    public void Play2D(string key, SoundType type)
     {
-        ResourceManager.Instance.LoadAsync<AudioClip>(key, clip => Play2D(clip, soundType));
+        ResourceManager.Instance.LoadAsync<AudioClip>(key, clip => Play2D(clip, type));
     }
 
-    public void Play2D(AudioClip clip, SoundType soundType)
+    public void Play2D(AudioClip clip, SoundType type)
     {
         if (clip == null)
         {
             return;
         }
 
-        var audioSource = _audioSources[(int)soundType];
+        var audioSource = _audioSources[(int)type];
 
-        if (soundType == SoundType.BGM)
+        if (type == SoundType.BGM)
         {
             if (audioSource.isPlaying)
             {
@@ -87,9 +91,9 @@ public sealed class SoundManager : MonoBehaviourSingleton<SoundManager>
         }
     }
 
-    public void Stop2D(SoundType soundType)
+    public void Stop2D(SoundType type)
     {
-        var audioSource = _audioSources[(int)soundType];
+        var audioSource = _audioSources[(int)type];
         if (audioSource.isPlaying)
         {
             audioSource.Stop();
@@ -115,18 +119,21 @@ public sealed class SoundManager : MonoBehaviourSingleton<SoundManager>
             go = PoolManager.Instance.Get("DDDSoundPlayer");
         }
 
+        go.transform.SetParent(parent);
+        go.transform.localPosition = position;
+
         var soundPlayer = go.GetComponent<DDDSoundPlayer>();
-        soundPlayer.Play(clip, position, parent, minDistance, maxDistance);
+        soundPlayer.Play(clip, minDistance, maxDistance);
     }
 
-    public float GetVolume(SoundType soundType)
+    public float GetVolume(SoundType type)
     {
-        return GetVolume(soundType.ToString());
+        return GetVolume(_typeNames[type]);
     }
 
-    public void SetVolume(SoundType soundType, float volume)
+    public void SetVolume(SoundType type, float volume)
     {
-        SetVolume(soundType.ToString(), volume);
+        SetVolume(_typeNames[type], volume);
     }
 
     public void Clear()

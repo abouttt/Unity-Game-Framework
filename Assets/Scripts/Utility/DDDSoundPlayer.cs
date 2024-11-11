@@ -10,15 +10,8 @@ public class DDDSoundPlayer : MonoBehaviour
         _audioSource = GetComponent<AudioSource>();
     }
 
-    public void Play(AudioClip clip, Vector3 position, Transform parent, float minDistance, float maxDistance)
+    public void Play(AudioClip clip, float minDistance, float maxDistance)
     {
-        if (parent != null)
-        {
-            transform.SetParent(parent);
-        }
-
-        transform.localPosition = position;
-
         _audioSource.clip = clip;
         _audioSource.minDistance = minDistance;
         _audioSource.maxDistance = maxDistance;

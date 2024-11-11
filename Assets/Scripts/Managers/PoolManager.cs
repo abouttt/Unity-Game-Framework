@@ -97,6 +97,7 @@ public sealed class PoolManager : MonoBehaviourSingleton<PoolManager>
         private void Create()
         {
             var go = Instantiate(_prefab);
+            go.name = _prefab.name;
             PushToInactiveContainer(go);
             _count++;
         }
@@ -152,6 +153,11 @@ public sealed class PoolManager : MonoBehaviourSingleton<PoolManager>
 
     public void Release(GameObject go, string tag = null)
     {
+        if (!go.activeSelf)
+        {
+            return;
+        }
+
         if (string.IsNullOrEmpty(tag))
         {
             tag = go.name;

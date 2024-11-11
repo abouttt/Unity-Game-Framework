@@ -70,8 +70,8 @@ public sealed class ResourceManager : MonoBehaviourSingleton<ResourceManager>
                 {
                     LoadAsync<Object>(result.PrimaryKey, resource =>
                     {
-                        resources[loadedCount] = resource;
-                        if (++loadedCount == totalCount)
+                        resources[loadedCount++] = resource;
+                        if (loadedCount == totalCount)
                         {
                             callback?.Invoke(resources);
                         }
@@ -110,6 +110,7 @@ public sealed class ResourceManager : MonoBehaviourSingleton<ResourceManager>
         if (_resources.TryGetValue(key, out var resource))
         {
             Addressables.Release(resource);
+            _resources.Remove(key);
         }
         else
         {

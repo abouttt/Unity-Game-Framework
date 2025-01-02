@@ -5,24 +5,16 @@ using UnityEngine.Audio;
 
 public sealed class SoundManager : MonoBehaviourSingleton<SoundManager>
 {
-    public float MasterVolume
+    public static float MasterVolume
     {
-        get
-        {
-            return GetVolume("Master");
-        }
-        set
-        {
-            SetVolume("Master", value);
-        }
+        get => Instance.GetVolume("Master");
+        set => Instance.SetVolume("Master", value);
     }
 
     [SerializeField, ReadOnly]
     private AudioMixer _audioMixer;
 
     private readonly List<AudioSource> _audioSources = new();
-    private readonly Dictionary<SoundType, string> _typeNames = new();
-    private GameObject _dddSoundPlayerPrefab;
 
     protected override void Init()
     {
@@ -53,27 +45,37 @@ public sealed class SoundManager : MonoBehaviourSingleton<SoundManager>
             }
 
             _audioSources.Add(audioSource);
-            _typeNames.Add(type, typeName);
         }
 
         _audioSources[(int)SoundType.BGM].loop = true;
-
-        ResourceManager.Instance.LoadAsync<GameObject>("DDDSoundPlayer.prefab", prefab => _dddSoundPlayerPrefab = prefab);
     }
 
-    public void Play2D(string key, SoundType type)
+    protected override void Dispose()
     {
-        ResourceManager.Instance.LoadAsync<AudioClip>(key, clip => Play2D(clip, type));
+        base.Dispose();
+        Clear();
+
+        foreach (var audioSource in _audioSources)
+        {
+            Destroy(audioSource.gameObject);
+        }
+
+        _audioSources.Clear();
     }
 
-    public void Play2D(AudioClip clip, SoundType type)
+    public static void Play2D(string key, SoundType type)
+    {
+        ResourceManager.LoadAsync<AudioClip>(key, clip => Play2D(clip, type));
+    }
+
+    public static void Play2D(AudioClip clip, SoundType type)
     {
         if (clip == null)
         {
             return;
         }
 
-        var audioSource = _audioSources[(int)type];
+        var audioSource = Instance._audioSources[(int)type];
 
         if (type == SoundType.BGM)
         {
@@ -91,60 +93,54 @@ public sealed class SoundManager : MonoBehaviourSingleton<SoundManager>
         }
     }
 
-    public void Stop2D(SoundType type)
+    public static void Stop2D(SoundType type)
     {
-        var audioSource = _audioSources[(int)type];
+        var audioSource = Instance._audioSources[(int)type];
         if (audioSource.isPlaying)
         {
             audioSource.Stop();
         }
     }
 
-    public void Play3D(string key, Vector3 position, Transform parent = null, float minDistance = 0f, float maxDistance = 15f)
+    public static void Play3D(string key, Vector3 position, Transform parent = null, float minDistance = 0f, float maxDistance = 15f)
     {
-        ResourceManager.Instance.LoadAsync<AudioClip>(key, clip => Play3D(clip, position, parent, minDistance, maxDistance));
+        ResourceManager.LoadAsync<AudioClip>(key, clip => Play3D(clip, position, parent, minDistance, maxDistance));
     }
 
-    public void Play3D(AudioClip clip, Vector3 position, Transform parent = null, float minDistance = 0f, float maxDistance = 15f)
+    public static void Play3D(AudioClip clip, Vector3 position, Transform parent = null, float minDistance = 0f, float maxDistance = 15f)
     {
         if (clip == null)
         {
             return;
         }
 
-        var go = PoolManager.Instance.Get("DDDSoundPlayer");
-        if (go == null)
+        ResourceManager.InstantiateAsync<DDDSoundPlayer>("DDDSoundPlayer", soundPlayer =>
         {
-            PoolManager.Instance.CreatePool(_dddSoundPlayerPrefab);
-            go = PoolManager.Instance.Get("DDDSoundPlayer");
-        }
-
-        go.transform.SetParent(parent);
-        go.transform.localPosition = position;
-
-        var soundPlayer = go.GetComponent<DDDSoundPlayer>();
-        soundPlayer.Play(clip, minDistance, maxDistance);
+            soundPlayer.transform.SetParent(parent);
+            soundPlayer.transform.localPosition = position;
+            soundPlayer.Play(clip, minDistance, maxDistance);
+        });
     }
 
-    public float GetVolume(SoundType type)
+    public static float GetVolume(SoundType type)
     {
-        return GetVolume(_typeNames[type]);
+        return Instance.GetVolume(type.ToString());
     }
 
-    public void SetVolume(SoundType type, float volume)
+    public static void SetVolume(SoundType type, float volume)
     {
-        SetVolume(_typeNames[type], volume);
+        Instance.SetVolume(type.ToString(), volume);
     }
 
-    public void Clear()
+    public static void Clear()
     {
-        foreach (var audioSource in _audioSources)
+        foreach (var audioSource in Instance._audioSources)
         {
             audioSource.Stop();
             audioSource.clip = null;
         }
 
-        PoolManager.Instance.ClearPool("DDDSoundPlayer");
+        PoolManager.RemovePool("DDDSoundPlayer");
     }
 
     private float GetVolume(string name)

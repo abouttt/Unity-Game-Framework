@@ -7,7 +7,7 @@ using Object = UnityEngine.Object;
 
 public sealed class ResourceManager : MonoBehaviourSingleton<ResourceManager>
 {
-    public int Count => _resources.Count;
+    public static int Count => Instance._resources.Count;
 
     [SerializeField, ReadOnly, SerializedDictionary("Key", "Resource")]
     private SerializedDictionary<string, Object> _resources = new();
@@ -24,9 +24,11 @@ public sealed class ResourceManager : MonoBehaviourSingleton<ResourceManager>
         Clear();
     }
 
-    public void LoadAsync<T>(string key, Action<T> callback = null) where T : Object
+    public static void LoadAsync<T>(string key, Action<T> callback) where T : Object
     {
-        if (_resources.TryGetValue(key, out var resource))
+        var instance = Instance;
+
+        if (instance._resources.TryGetValue(key, out var resource))
         {
             callback?.Invoke(resource as T);
         }
@@ -36,16 +38,16 @@ public sealed class ResourceManager : MonoBehaviourSingleton<ResourceManager>
             {
                 if (handle.Status == AsyncOperationStatus.Succeeded)
                 {
-                    if (_resources.ContainsKey(key))
+                    if (instance._resources.ContainsKey(key))
                     {
                         Addressables.Release(handle);
                     }
                     else
                     {
-                        _resources.Add(key, handle.Result);
+                        instance._resources.Add(key, handle.Result);
                     }
 
-                    callback?.Invoke(_resources[key] as T);
+                    callback?.Invoke(instance._resources[key] as T);
                 }
                 else
                 {
@@ -56,7 +58,7 @@ public sealed class ResourceManager : MonoBehaviourSingleton<ResourceManager>
         }
     }
 
-    public void LoadAllAsync(string label, Action<Object[]> callback = null)
+    public static void LoadAllAsync(string label, Action<Object[]> callback = null)
     {
         Addressables.LoadResourceLocationsAsync(label, typeof(Object)).Completed += handle =>
         {
@@ -86,31 +88,34 @@ public sealed class ResourceManager : MonoBehaviourSingleton<ResourceManager>
         };
     }
 
-    public void InstantiateAsync(string key, Action<GameObject> callback = null, Transform parent = null)
+    public static void InstantiateAsync(string key, Action<GameObject> callback = null, Transform parent = null, bool pooling = false)
     {
         LoadAsync<GameObject>(key, prefab =>
         {
-            var go = Instantiate(prefab, parent);
+            var go = pooling ? PoolManager.Get(prefab, parent) : Instantiate(prefab, parent);
             callback?.Invoke(go);
         });
     }
 
-    public void InstantiateAsync<T>(string key, Action<T> callback = null, Transform parent = null) where T : Component
+    public static void InstantiateAsync<T>(string key, Action<T> callback = null, Transform parent = null, bool pooling = false)
+        where T : Component
     {
         InstantiateAsync(key, go =>
         {
             var component = go.GetComponent<T>();
             callback?.Invoke(component);
         },
-        parent);
+        parent, pooling);
     }
 
-    public void Release(string key)
+    public static void Release(string key)
     {
-        if (_resources.TryGetValue(key, out var resource))
+        var instance = Instance;
+
+        if (instance._resources.TryGetValue(key, out var resource))
         {
             Addressables.Release(resource);
-            _resources.Remove(key);
+            instance._resources.Remove(key);
         }
         else
         {
@@ -118,13 +123,30 @@ public sealed class ResourceManager : MonoBehaviourSingleton<ResourceManager>
         }
     }
 
-    public void Clear()
+    public static void Destroy(GameObject go)
     {
-        foreach (var kvp in _resources)
+        if (go == null)
+        {
+            return;
+        }
+
+        if (PoolManager.Release(go))
+        {
+            return;
+        }
+
+        Object.Destroy(go);
+    }
+
+    public static void Clear()
+    {
+        var instance = Instance;
+
+        foreach (var kvp in instance._resources)
         {
             Addressables.Release(kvp.Value);
         }
 
-        _resources.Clear();
+        instance._resources.Clear();
     }
 }

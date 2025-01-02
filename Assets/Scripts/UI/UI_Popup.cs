@@ -42,14 +42,14 @@ public class UI_Popup : UI_View, IPointerDownHandler
 
     protected virtual void OnEnable()
     {
-        Managers.Input.CursorLocked = false;
+        InputManager.CursorLocked = false;
     }
 
     protected virtual void OnDisable()
     {
-        if (Managers.UI.ActivePopupCount == 0)
+        if (UIManager.ActivePopupCount == 0)
         {
-            Managers.Input.CursorLocked = true;
+            InputManager.CursorLocked = true;
         }
     }
 

@@ -31,27 +31,30 @@ public class DataManager : MonoBehaviourSingleton<DataManager>
         }
     }
 
-    public void Save(string saveKey, JToken saveData)
+    public static void Save(string saveKey, JToken saveData)
     {
-        if (_saveData.ContainsKey(saveKey))
+        var instance = Instance;
+
+        if (instance._saveData.ContainsKey(saveKey))
         {
-            _saveData[saveKey] = saveData;
+            instance._saveData[saveKey] = saveData;
         }
         else
         {
-            _saveData.Add(saveKey, saveData);
+            instance._saveData.Add(saveKey, saveData);
         }
 
-        SaveToFile(SaveFilePath, _saveData.ToString());
+        instance.SaveToFile(SaveFilePath, instance._saveData.ToString());
     }
 
-    public bool Load<T>(string saveKey, out T saveData) where T : class
+    public static bool Load<T>(string saveKey, out T saveData) where T : class
     {
+        var instance = Instance;
         saveData = null;
 
-        if (_saveData != null)
+        if (instance._saveData != null)
         {
-            var token = _saveData.GetValue(saveKey);
+            var token = instance._saveData.GetValue(saveKey);
             if (token != null)
             {
                 saveData = token.ToObject<T>();
@@ -61,11 +64,11 @@ public class DataManager : MonoBehaviourSingleton<DataManager>
         return saveData != null;
     }
 
-    public void DeleteSaveData()
+    public static void DeleteSaveData()
     {
         File.Delete(SaveFilePath);
         File.Delete(SaveMetaFilePath);
-        _saveData?.RemoveAll();
+        Instance._saveData?.RemoveAll();
     }
 
     private void SaveToFile(string path, string json)

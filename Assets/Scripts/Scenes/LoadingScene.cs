@@ -5,40 +5,37 @@ using UnityEngine;
 public class LoadingScene : BaseScene
 {
     [SerializeField]
-    private string _defaultSceneAddress;
+    private string _defaultSceneName;
 
     protected override void Init()
     {
         base.Init();
-        Managers.Clear();
+        ClearManagers();
         Resources.UnloadUnusedAssets();
         GC.Collect();
 
-        if (!Managers.Scene.IsReadyToLoad)
+        if (!SceneLoader.IsReadyToLoad)
         {
-            Managers.Scene.ReadyToLoad(_defaultSceneAddress);
+            SceneLoader.ReadyToLoad(_defaultSceneName);
         }
 
-        Managers.Scene.ReadyToLoadComplete += () =>
-        {
-            StartCoroutine(LoadComplete());
-        };
+        SceneLoader.LoadCompleted += () => StartCoroutine(LoadComplete());
     }
 
     private void Start()
     {
-        LoadResourcesByLabels(() => Managers.Scene.StartLoad());
+        LoadResourcesByLabels(() => SceneLoader.StartLoad());
     }
 
     private IEnumerator LoadComplete()
     {
         yield return YieldCache.WaitForSeconds(SceneSettings.Instance.FadeOutDuration);
-        Managers.Scene.CompleteLoad();
+        SceneLoader.SwitchLoadedScene();
     }
 
     private void LoadResourcesByLabels(Action callback = null)
     {
-        var loadResourceLabels = SceneSettings.Instance[Managers.Scene.NextSceneAddress].AddressableLabels;
+        var loadResourceLabels = SceneSettings.Instance[SceneLoader.NextSceneName].AddressableLabels;
         if (loadResourceLabels == null || loadResourceLabels.Length == 0)
         {
             callback?.Invoke();
@@ -50,7 +47,7 @@ public class LoadingScene : BaseScene
 
         foreach (var label in loadResourceLabels)
         {
-            Managers.Resource.LoadAllAsync(label.labelString, _ =>
+            ResourceManager.LoadAllAsync(label.labelString, _ =>
             {
                 if (++loadedCount == totalCount)
                 {
@@ -58,5 +55,14 @@ public class LoadingScene : BaseScene
                 }
             });
         }
+    }
+
+    private void ClearManagers()
+    {
+        InputManager.Clear();
+        PoolManager.Clear();
+        ResourceManager.Clear();
+        SoundManager.Clear();
+        UIManager.Clear();
     }
 }

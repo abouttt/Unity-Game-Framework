@@ -17,12 +17,30 @@ public class ScriptableSingleton<T> : ScriptableObject where T : ScriptableObjec
             return _instance;
         }
 
-        string filePath = string.IsNullOrEmpty(path) ? typeof(T).Name : $"{path}/{typeof(T).Name}";
-
-        _instance = Resources.Load<T>(filePath);
-        if (_instance == null)
+        if (string.IsNullOrEmpty(path))
         {
-            CreateFile(path);
+            T[] assets = Resources.LoadAll<T>("");
+            if (assets == null || assets.Length == 0)
+            {
+                CreateFile(string.Empty);
+            }
+            else if (assets.Length > 1)
+            {
+                Debug.LogWarning($"[ScriptableSingleton] Multiple instances of {typeof(T).Name} found in Resources.");
+            }
+
+            if (_instance == null || assets.Length > 0)
+            {
+                _instance = assets[0];
+            }
+        }
+        else
+        {
+            _instance = Resources.Load<T>($"{path}/{typeof(T).Name}");
+            if (_instance == null)
+            {
+                CreateFile(path);
+            }
         }
 
         return _instance;
@@ -32,17 +50,18 @@ public class ScriptableSingleton<T> : ScriptableObject where T : ScriptableObjec
     {
 #if UNITY_EDITOR
         string assetName = typeof(T).Name;
-        string fileDirectory = string.IsNullOrEmpty(path) ? $"Assets/Resources" : $"Assets/Resources/{path}";
-        string filePath = $"{fileDirectory}/{assetName}.asset";
+        string directory = string.IsNullOrEmpty(path) ? $"Assets/Resources" : $"Assets/Resources/{path}";
+        string filePath = $"{directory}/{assetName}.asset";
 
-        CreateDirectory(fileDirectory);
+        CreateDirectory(directory);
 
         _instance = AssetDatabase.LoadAssetAtPath<T>(filePath);
         if (_instance == null)
         {
             _instance = CreateInstance<T>();
             AssetDatabase.CreateAsset(_instance, filePath);
-            Debug.Log($"{assetName} was created because the asset did not exist.");
+            AssetDatabase.SaveAssets();
+            Debug.Log($"{typeof(T).Name} asset created at: {filePath}");
         }
 #endif
     }

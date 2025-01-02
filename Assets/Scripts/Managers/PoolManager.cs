@@ -5,27 +5,23 @@ using AYellowpaper.SerializedCollections;
 
 public sealed class PoolManager : MonoBehaviourSingleton<PoolManager>
 {
-    #region Pool
+    #region
     [Serializable]
     private class Pool
     {
         public Transform Root => _root;
-        public int Count => _count;
 
         [SerializeField, ReadOnly]
         private GameObject _prefab;
-
-        [SerializeField, ReadOnly]
-        private int _count;
 
         private readonly Transform _root;
         private readonly HashSet<GameObject> _activeObjects = new();
         private readonly Stack<GameObject> _inactiveObjects = new();
 
-        public Pool(GameObject prefab, int count, string tag)
+        public Pool(GameObject prefab, int count)
         {
             _prefab = prefab;
-            _root = new GameObject($"{tag}_Root").transform;
+            _root = new GameObject($"{prefab}_Root").transform;
 
             for (int i = 0; i < count; i++)
             {
@@ -84,7 +80,6 @@ public sealed class PoolManager : MonoBehaviourSingleton<PoolManager>
 
             _activeObjects.Clear();
             _inactiveObjects.Clear();
-            _count = 0;
         }
 
         public void Dispose()
@@ -99,7 +94,6 @@ public sealed class PoolManager : MonoBehaviourSingleton<PoolManager>
             var go = Instantiate(_prefab);
             go.name = _prefab.name;
             PushToInactiveContainer(go);
-            _count++;
         }
 
         private void PushToInactiveContainer(GameObject go)
@@ -111,7 +105,7 @@ public sealed class PoolManager : MonoBehaviourSingleton<PoolManager>
     }
     #endregion
 
-    [SerializeField, ReadOnly, SerializedDictionary("Tag", "Pool")]
+    [SerializeField, ReadOnly, SerializedDictionary("Name", "Pool")]
     private SerializedDictionary<string, Pool> _pools = new();
 
     protected override void Dispose()
@@ -120,113 +114,118 @@ public sealed class PoolManager : MonoBehaviourSingleton<PoolManager>
         Clear();
     }
 
-    public void CreatePool(GameObject prefab, int count = 3, string tag = null)
+    public static void CreatePool(GameObject prefab, int count = 5)
     {
-        if (string.IsNullOrEmpty(tag))
+        if (prefab == null)
         {
-            tag = prefab.name;
-        }
-
-        if (_pools.ContainsKey(tag))
-        {
-            Debug.LogWarning($"[PoolManager.CreatePool] {tag} pool already exists.");
+            Debug.LogWarning($"[PoolManager.CreatePool] Prefab is null.");
             return;
         }
 
-        var pool = new Pool(prefab, count, tag);
-        pool.Root.SetParent(transform);
-        _pools.Add(tag, pool);
+        var instance = Instance;
+        var name = prefab.name;
+
+        if (instance._pools.ContainsKey(name))
+        {
+            Debug.LogWarning($"[PoolManager.CreatePool] {name} pool already exist.");
+            return;
+        }
+
+        var pool = new Pool(prefab, count);
+        pool.Root.SetParent(instance.transform);
+        instance._pools.Add(name, pool);
     }
 
-    public GameObject Get(string tag, Transform parent = null)
+    public static GameObject Get(GameObject go, Transform parent = null)
     {
-        if (_pools.TryGetValue(tag, out var pool))
+        if (go == null)
+        {
+            Debug.LogWarning($"[PoolManager.Get] GameObject is null.");
+            return null;
+        }
+
+        var instance = Instance;
+
+        if (!instance._pools.TryGetValue(go.name, out var pool))
+        {
+            CreatePool(go);
+            pool = instance._pools[go.name];
+        }
+
+        return pool.Get(parent);
+    }
+
+    public static GameObject Get(string name, Transform parent = null)
+    {
+        if (Instance._pools.TryGetValue(name, out var pool))
         {
             return pool.Get(parent);
         }
         else
         {
-            Debug.LogWarning($"[PoolManager.Get] {tag} pool does not exist.");
             return null;
         }
     }
 
-    public void Release(GameObject go, string tag = null)
+    public static bool Release(GameObject go)
     {
         if (!go.activeSelf)
         {
-            return;
+            return false;
         }
 
-        if (string.IsNullOrEmpty(tag))
+        if (Instance._pools.TryGetValue(go.name, out var pool))
         {
-            tag = go.name;
-        }
-
-        if (_pools.TryGetValue(tag, out var pool))
-        {
-            if (!pool.Release(go))
+            if (pool.Release(go))
             {
-                Debug.LogWarning($"[PoolManager.Release] {go.name} object is not included in {tag} pool.");
-                Destroy(go);
+                return true;
             }
         }
-        else
-        {
-            Debug.LogWarning($"[PoolManager.Release] {tag} pool does not exist.");
-            Destroy(go);
-        }
+
+        return false;
     }
 
-    public void ReleaseAll(string tag)
+    public static void ReleaseAll(string name)
     {
-        if (_pools.TryGetValue(tag, out var pool))
+        if (Instance._pools.TryGetValue(name, out var pool))
         {
             pool.ReleaseAll();
         }
-        else
-        {
-            Debug.LogWarning($"[PoolManager.ReleaseAll] {tag} pool does not exist.");
-        }
     }
 
-    public void ClearPool(string tag)
+    public static void ClearPool(string name)
     {
-        if (_pools.TryGetValue(tag, out var pool))
+        if (Instance._pools.TryGetValue(name, out var pool))
         {
             pool.Clear();
         }
-        else
-        {
-            Debug.LogWarning($"[PoolManager.ClearPool] {tag} pool does not exist.");
-        }
     }
 
-    public void RemovePool(string tag)
+    public static void RemovePool(string name)
     {
-        if (_pools.TryGetValue(tag, out var pool))
+        var instance = Instance;
+
+        if (instance._pools.TryGetValue(name, out var pool))
         {
             pool.Dispose();
-            _pools.Remove(tag);
-        }
-        else
-        {
-            Debug.LogWarning($"[PoolManager/RemovePool] {tag} pool does not exist.");
+            instance._pools.Remove(name);
         }
     }
 
-    public bool Contains(string tag)
+    public static bool Contains(string name)
     {
-        return _pools.ContainsKey(tag);
+        return Instance._pools.ContainsKey(name);
     }
 
-    public void Clear()
+    public static void Clear()
     {
-        foreach (var kvp in _pools)
+        var instance = Instance;
+
+        foreach (var kvp in instance._pools)
         {
             kvp.Value.Dispose();
         }
 
-        _pools.Clear();
+        instance._pools.Clear();
     }
 }

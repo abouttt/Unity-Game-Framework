@@ -3,28 +3,28 @@ using UnityEngine.InputSystem;
 
 public sealed class InputManager : MonoBehaviourSingleton<InputManager>
 {
-    public bool Enabled
+    public static bool Enabled
     {
-        get => _inputActions.asset.enabled;
+        get => Instance._inputActions.asset.enabled;
         set
         {
             if (value)
             {
-                _inputActions.Enable();
+                Instance._inputActions.Enable();
             }
             else
             {
-                _inputActions.Disable();
+                Instance._inputActions.Disable();
             }
         }
     }
 
-    public bool CursorLocked
+    public static bool CursorLocked
     {
-        get => _cursorLocked;
+        get => Instance._cursorLocked;
         set
         {
-            _cursorLocked = value;
+            Instance._cursorLocked = value;
             Cursor.visible = !value;
             Cursor.lockState = value ? CursorLockMode.Locked : CursorLockMode.None;
         }
@@ -47,17 +47,17 @@ public sealed class InputManager : MonoBehaviourSingleton<InputManager>
         _inputActions.Dispose();
     }
 
-    public InputActionMap GetActionMap(string nameOrId, bool throwIfNotFound = false)
+    public static InputActionMap GetActionMap(string nameOrId, bool throwIfNotFound = false)
     {
-        return _inputActions.asset.FindActionMap(nameOrId, throwIfNotFound);
+        return Instance._inputActions.asset.FindActionMap(nameOrId, throwIfNotFound);
     }
 
-    public InputAction GetAction(string actionNameOrId, bool throwIfNotFound = false)
+    public static InputAction GetAction(string actionNameOrId, bool throwIfNotFound = false)
     {
-        return _inputActions.FindAction(actionNameOrId, throwIfNotFound);
+        return Instance._inputActions.FindAction(actionNameOrId, throwIfNotFound);
     }
 
-    public string GetBindingPath(string actionNameOrId, int bindingIndex = 0)
+    public static string GetBindingPath(string actionNameOrId, int bindingIndex = 0)
     {
         string bindingPath = GetAction(actionNameOrId).bindings[bindingIndex].path;
         int lastSlashIndex = bindingPath.LastIndexOf('/');
@@ -65,7 +65,7 @@ public sealed class InputManager : MonoBehaviourSingleton<InputManager>
         return path.ToUpper();
     }
 
-    public void Clear()
+    public static void Clear()
     {
         Enabled = false;
     }

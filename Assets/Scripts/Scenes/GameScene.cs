@@ -7,8 +7,8 @@ public class GameScene : BaseScene
 
     private void Start()
     {
-        Managers.Input.Enabled = true;
-        Managers.Input.CursorLocked = true;
-        Managers.Sound.Play2D(_bgm, SoundType.BGM);
+        InputManager.Enabled = true;
+        InputManager.CursorLocked = true;
+        SoundManager.Play2D(_bgm, SoundType.BGM);
     }
 }

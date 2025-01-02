@@ -27,6 +27,6 @@ public class SceneSettings : ScriptableSingleton<SceneSettings>
     [field: SerializeField]
     public float FadeOutDuration { get; private set; }
 
-    [SerializeField, SerializedDictionary("Scene Address", "Settings")]
+    [SerializeField, SerializedDictionary("Scene Name", "Settings")]
     private SerializedDictionary<string, Settings> _settings;
 }

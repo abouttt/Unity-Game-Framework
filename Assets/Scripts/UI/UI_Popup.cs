@@ -5,6 +5,8 @@ using UnityEngine.EventSystems;
 public class UI_Popup : UI_View, IPointerDownHandler
 {
     public event Action Focused;
+    public event Action Showed;
+    public event Action Hided;
 
     [field: SerializeField]
     public bool IsHelper { get; private set; }
@@ -21,9 +23,9 @@ public class UI_Popup : UI_View, IPointerDownHandler
     [field: SerializeField]
     public Vector3 DefaultPosition { get; private set; }
 
-    protected override void Awake()
+    protected override void Init()
     {
-        base.Awake();
+        base.Init();
 
         UIType = UIType.Popup;
 
@@ -40,21 +42,30 @@ public class UI_Popup : UI_View, IPointerDownHandler
         gameObject.SetActive(false);
     }
 
-    protected virtual void OnEnable()
+    private void OnEnable()
     {
-        InputManager.CursorLocked = false;
+        Showed?.Invoke();
     }
 
-    protected virtual void OnDisable()
+    private void OnDisable()
     {
-        if (UIManager.ActivePopupCount == 0)
-        {
-            InputManager.CursorLocked = true;
-        }
+        Hided?.Invoke();
+    }
+
+    private void OnApplicationQuit()
+    {
+        ClearCallbacks();
     }
 
     public void OnPointerDown(PointerEventData eventData)
     {
         Focused?.Invoke();
+    }
+
+    public void ClearCallbacks()
+    {
+        Focused = null;
+        Showed = null;
+        Hided = null;
     }
 }

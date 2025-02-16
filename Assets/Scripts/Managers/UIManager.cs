@@ -106,7 +106,7 @@ public class UIManager : MonoBehaviourSingleton<UIManager>
         }
     }
 
-    public static void Close<T>() where T : UI_View
+    public static void Hide<T>() where T : UI_View
     {
         var instance = Instance;
 
@@ -119,7 +119,7 @@ public class UIManager : MonoBehaviourSingleton<UIManager>
 
             if (ui.UIType == UIType.Popup)
             {
-                instance.ClosePopup(ui as UI_Popup);
+                instance.HidePopup(ui as UI_Popup);
             }
             else
             {
@@ -128,21 +128,21 @@ public class UIManager : MonoBehaviourSingleton<UIManager>
         }
         else
         {
-            Debug.LogWarning($"[UIManager.Close] {typeof(T)} is not registered.");
+            Debug.LogWarning($"[UIManager.Hide] {typeof(T)} is not registered.");
         }
     }
 
-    public static void CloseTopPopup()
+    public static void HideTopPopup()
     {
         var instance = Instance;
 
         if (instance._activePopups.Count > 0)
         {
-            instance.ClosePopup(instance._activePopups.First.Value);
+            instance.HidePopup(instance._activePopups.First.Value);
         }
     }
 
-    public static void CloseAll(UIType uiType)
+    public static void HideAll(UIType uiType)
     {
         var instance = Instance;
 
@@ -166,11 +166,11 @@ public class UIManager : MonoBehaviourSingleton<UIManager>
         }
     }
 
-    public static void ShowOrClose<T>() where T : UI_View
+    public static void ShowOrHide<T>() where T : UI_View
     {
         if (IsActive<T>())
         {
-            Close<T>();
+            Hide<T>();
         }
         else
         {
@@ -226,6 +226,19 @@ public class UIManager : MonoBehaviourSingleton<UIManager>
             _activePopups.AddFirst(popup);
             RefreshAllPopupDepth();
         };
+
+        popup.Showed += () =>
+        {
+            InputManager.CursorLocked = false;
+        };
+
+        popup.Hided += () =>
+        {
+            if (_activePopups.Count == 0)
+            {
+                InputManager.CursorLocked = true;
+            }
+        };
     }
 
     private void UnregisterPopup(UI_Popup popup)
@@ -261,7 +274,7 @@ public class UIManager : MonoBehaviourSingleton<UIManager>
         }
         else if (popup.IsSelfish)
         {
-            CloseAll(UIType.Popup);
+            HideAll(UIType.Popup);
             _selfishPopup = popup;
         }
 
@@ -272,7 +285,7 @@ public class UIManager : MonoBehaviourSingleton<UIManager>
         return popup as T;
     }
 
-    private void ClosePopup(UI_Popup popup)
+    private void HidePopup(UI_Popup popup)
     {
         if (popup.IsHelper)
         {

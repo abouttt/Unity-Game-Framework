@@ -1,23 +1,19 @@
 using UnityEngine;
 
-public class UI_View : MonoBehaviour
+public abstract class UI_View : UI_Base
 {
     [field: SerializeField]
     public UIType UIType { get; protected set; }
+
+    [field: SerializeField]
+    public bool IsValidForUISettings { get; private set; } = true;
 
     public Canvas Canvas => _canvas;
 
     private Canvas _canvas;
 
-    protected virtual void Awake()
+    protected override void Init()
     {
-        if (TryGetComponent(out _canvas))
-        {
-            _canvas.sortingOrder = (int)UIType;
-        }
-        else
-        {
-            Debug.LogWarning($"{name} ui view object does not have a Canvas component.");
-        }
+        _canvas = GetComponent<Canvas>();
     }
 }

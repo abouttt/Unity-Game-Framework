@@ -16,13 +16,13 @@ MonoBehaviour:
   <FadeOutDuration>k__BackingField: 0.5
   _settings:
     _serializedList:
-    - Key: DevScene.unity
+    - Key: DevScene
       Value:
         <AddressableLabels>k__BackingField:
         - m_LabelString: Default
         <ReloadSceneWhenNoResources>k__BackingField: 1
         <LoadingBackground>k__BackingField: {fileID: 0}
-    - Key: LoadingScene.unity
+    - Key: LoadingScene
       Value:
         <AddressableLabels>k__BackingField:
         - m_LabelString: Default

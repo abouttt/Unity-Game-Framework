@@ -16,13 +16,13 @@ MonoBehaviour:
   m_GUID: eaa11d8a21e09584793f69e32688c6f5
   m_SerializeEntries:
   - m_GUID: a62c1c08d8a72a54ab8ea0f6827fcb88
-    m_Address: DDDSoundPlayer.prefab
+    m_Address: DDDSoundPlayer
     m_ReadOnly: 0
     m_SerializedLabels:
     - Default
     FlaggedDuringContentUpdateRestriction: 0
   - m_GUID: a80a63d07fe0a8a4197ac82a0185f51f
-    m_Address: EventSystem.prefab
+    m_Address: EventSystem
     m_ReadOnly: 0
     m_SerializedLabels:
     - Default

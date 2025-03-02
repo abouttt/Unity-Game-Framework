@@ -1,5 +1,5 @@
-using System.Collections;
 using UnityEngine;
+using UnityEngine.Audio;
 
 public class DDDSoundPlayer : MonoBehaviour
 {
@@ -10,23 +10,24 @@ public class DDDSoundPlayer : MonoBehaviour
         _audioSource = GetComponent<AudioSource>();
     }
 
-    public void Play(AudioClip clip, float minDistance, float maxDistance)
+    public async void Play(AudioClip clip, AudioMixerGroup output, float minDistance, float maxDistance)
     {
         _audioSource.clip = clip;
+        _audioSource.outputAudioMixerGroup = output;
         _audioSource.minDistance = minDistance;
         _audioSource.maxDistance = maxDistance;
         _audioSource.Play();
-
-        StartCoroutine(AutoRelease());
+        await AutoRelease();
     }
 
-    private IEnumerator AutoRelease()
+    private async Awaitable AutoRelease()
     {
         float timeScale = Time.timeScale;
         float time = _audioSource.clip.length * ((timeScale < 0.01f) ? 0.01f : timeScale);
-        yield return YieldCache.WaitForSeconds(time);
+
+        await Awaitable.WaitForSecondsAsync(time);
 
         _audioSource.clip = null;
-        PoolManager.Release(gameObject);
+        Managers.Resource.Destroy(gameObject);
     }
 }

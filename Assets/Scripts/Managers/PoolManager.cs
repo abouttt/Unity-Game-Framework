@@ -1,19 +1,15 @@
-using System;
 using System.Collections.Generic;
 using UnityEngine;
 using AYellowpaper.SerializedCollections;
 
-public sealed class PoolManager : MonoBehaviourSingleton<PoolManager>
+public sealed class PoolManager : IManager
 {
-    #region
-    [Serializable]
+    #region Pool
     private class Pool
     {
         public Transform Root => _root;
 
-        [SerializeField, ReadOnly]
-        private GameObject _prefab;
-
+        private readonly GameObject _prefab;
         private readonly Transform _root;
         private readonly HashSet<GameObject> _activeObjects = new();
         private readonly Stack<GameObject> _inactiveObjects = new();
@@ -36,31 +32,34 @@ public sealed class PoolManager : MonoBehaviourSingleton<PoolManager>
                 Create();
             }
 
-            var go = _inactiveObjects.Pop();
-            go.transform.SetParent(parent != null ? parent : _root);
-            go.SetActive(true);
-            _activeObjects.Add(go);
+            var gameObject = _inactiveObjects.Pop();
+            if (parent != null)
+            {
+                gameObject.transform.SetParent(parent);
+            }
+            gameObject.SetActive(true);
+            _activeObjects.Add(gameObject);
 
-            return go;
+            return gameObject;
         }
 
-        public bool Release(GameObject go)
+        public bool Release(GameObject gameObject)
         {
-            if (!_activeObjects.Remove(go))
+            if (!_activeObjects.Remove(gameObject))
             {
                 return false;
             }
 
-            PushToInactiveContainer(go);
+            ChangeToInactive(gameObject);
 
             return true;
         }
 
         public void ReleaseAll()
         {
-            foreach (var go in _activeObjects)
+            foreach (var activeGameObject in _activeObjects)
             {
-                PushToInactiveContainer(go);
+                ChangeToInactive(activeGameObject);
             }
 
             _activeObjects.Clear();
@@ -68,14 +67,14 @@ public sealed class PoolManager : MonoBehaviourSingleton<PoolManager>
 
         public void Clear()
         {
-            foreach (var go in _activeObjects)
+            foreach (var activeGameObject in _activeObjects)
             {
-                Destroy(go);
+                Object.Destroy(activeGameObject);
             }
 
-            foreach (var go in _inactiveObjects)
+            foreach (var inactiveGameObject in _inactiveObjects)
             {
-                Destroy(go);
+                Object.Destroy(inactiveGameObject);
             }
 
             _activeObjects.Clear();
@@ -85,79 +84,62 @@ public sealed class PoolManager : MonoBehaviourSingleton<PoolManager>
         public void Dispose()
         {
             Clear();
-            _prefab = null;
-            Destroy(_root.gameObject);
+            Object.Destroy(_root.gameObject);
         }
 
         private void Create()
         {
-            var go = Instantiate(_prefab);
-            go.name = _prefab.name;
-            PushToInactiveContainer(go);
+            var newGameObject = Object.Instantiate(_prefab);
+            newGameObject.name = _prefab.name;
+            ChangeToInactive(newGameObject);
         }
 
-        private void PushToInactiveContainer(GameObject go)
+        private void ChangeToInactive(GameObject gameObject)
         {
-            go.SetActive(false);
-            go.transform.SetParent(_root);
-            _inactiveObjects.Push(go);
+            gameObject.SetActive(false);
+            gameObject.transform.SetParent(_root);
+            _inactiveObjects.Push(gameObject);
         }
     }
     #endregion
 
-    [SerializeField, ReadOnly, SerializedDictionary("Name", "Pool")]
-    private SerializedDictionary<string, Pool> _pools = new();
+    private Transform _root;
+    private readonly SerializedDictionary<string, Pool> _pools = new();
 
-    protected override void Dispose()
+    public void Initialize()
     {
-        base.Dispose();
-        Clear();
+        _root = IManager.CreateRoot("Pool_Root");
     }
 
-    public static void CreatePool(GameObject prefab, int count = 5)
+    public void CreatePool(GameObject prefab, int count = 5)
     {
-        if (prefab == null)
-        {
-            Debug.LogWarning($"[PoolManager.CreatePool] Prefab is null.");
-            return;
-        }
-
-        var instance = Instance;
         var name = prefab.name;
 
-        if (instance._pools.ContainsKey(name))
+        if (_pools.ContainsKey(name))
         {
-            Debug.LogWarning($"[PoolManager.CreatePool] {name} pool already exist.");
+            Debug.LogWarning($"[PoolManager] {name} Pool already exist");
             return;
         }
 
-        var pool = new Pool(prefab, count);
-        pool.Root.SetParent(instance.transform);
-        instance._pools.Add(name, pool);
+        var newPool = new Pool(prefab, count);
+        newPool.Root.SetParent(_root);
+        _pools.Add(name, newPool);
     }
 
-    public static GameObject Get(GameObject go, Transform parent = null)
+    public GameObject Get(GameObject gameObject, Transform parent = null)
     {
-        if (go == null)
+        if (!_pools.TryGetValue(gameObject.name, out var pool))
         {
-            Debug.LogWarning($"[PoolManager.Get] GameObject is null.");
-            return null;
-        }
-
-        var instance = Instance;
-
-        if (!instance._pools.TryGetValue(go.name, out var pool))
-        {
-            CreatePool(go);
-            pool = instance._pools[go.name];
+            CreatePool(gameObject);
+            pool = _pools[gameObject.name];
         }
 
         return pool.Get(parent);
     }
 
-    public static GameObject Get(string name, Transform parent = null)
+    public GameObject Get(string name, Transform parent = null)
     {
-        if (Instance._pools.TryGetValue(name, out var pool))
+        if (_pools.TryGetValue(name, out var pool))
         {
             return pool.Get(parent);
         }
@@ -167,16 +149,11 @@ public sealed class PoolManager : MonoBehaviourSingleton<PoolManager>
         }
     }
 
-    public static bool Release(GameObject go)
+    public bool Release(GameObject gameObject)
     {
-        if (!go.activeSelf)
+        if (_pools.TryGetValue(gameObject.name, out var pool))
         {
-            return false;
-        }
-
-        if (Instance._pools.TryGetValue(go.name, out var pool))
-        {
-            if (pool.Release(go))
+            if (pool.Release(gameObject))
             {
                 return true;
             }
@@ -185,47 +162,43 @@ public sealed class PoolManager : MonoBehaviourSingleton<PoolManager>
         return false;
     }
 
-    public static void ReleaseAll(string name)
+    public void ReleaseAll(string name)
     {
-        if (Instance._pools.TryGetValue(name, out var pool))
+        if (_pools.TryGetValue(name, out var pool))
         {
             pool.ReleaseAll();
         }
     }
 
-    public static void ClearPool(string name)
+    public void ClearPool(string name)
     {
-        if (Instance._pools.TryGetValue(name, out var pool))
+        if (_pools.TryGetValue(name, out var pool))
         {
             pool.Clear();
         }
     }
 
-    public static void RemovePool(string name)
+    public void RemovePool(string name)
     {
-        var instance = Instance;
-
-        if (instance._pools.TryGetValue(name, out var pool))
+        if (_pools.TryGetValue(name, out var pool))
         {
             pool.Dispose();
-            instance._pools.Remove(name);
+            _pools.Remove(name);
         }
     }
 
-    public static bool Contains(string name)
+    public bool Contains(string name)
     {
-        return Instance._pools.ContainsKey(name);
+        return _pools.ContainsKey(name);
     }
 
-    public static void Clear()
+    public void Clear()
     {
-        var instance = Instance;
-
-        foreach (var kvp in instance._pools)
+        foreach (var kvp in _pools)
         {
             kvp.Value.Dispose();
         }
 
-        instance._pools.Clear();
+        _pools.Clear();
     }
 }

@@ -6,12 +6,10 @@ using Object = UnityEngine.Object;
 public class DataBinder
 {
     private readonly Dictionary<Type, Dictionary<string, Object>> _bindings = new();
-    private readonly GameObject _gameObject;
 
     public DataBinder(GameObject gameObject)
     {
-        _gameObject = gameObject;
-        FindDataBindings();
+        FindDataBindings(gameObject);
     }
 
     public T Get<T>(string id) where T : Object
@@ -27,31 +25,31 @@ public class DataBinder
         return null;
     }
 
-    private void FindDataBindings()
+    private void FindDataBindings(GameObject gameObject)
     {
-        foreach (var binding in _gameObject.GetComponentsInChildren<DataBinding>(true))
+        foreach (var binding in gameObject.GetComponentsInChildren<DataBinding>(true))
         {
             if (IsNullBinding(binding))
             {
-                LogWarning($"Binding failed : ID or Target is null", binding);
+                LogBindingFailed(gameObject, $"{binding} ID or Target is null");
                 continue;
             }
 
-            AddBinding(binding);
+            AddBinding(gameObject, binding);
         }
     }
 
-    private void AddBinding(DataBinding binding)
+    private void AddBinding(GameObject gameObject, DataBinding binding)
     {
         if (!_bindings.TryGetValue(binding.BindingType, out var typeBindings))
         {
-            typeBindings = new Dictionary<string, Object>();
-            _bindings[binding.BindingType] = typeBindings;
+            typeBindings = new();
+            _bindings.Add(binding.BindingType, typeBindings);
         }
 
-        if (typeBindings.ContainsKey(binding.DataID))
+        if (typeBindings.TryGetValue(binding.DataID, out var existing))
         {
-            LogWarning($"Binding failed : Duplicate ID", binding);
+            LogBindingFailed(gameObject, $"Duplicate ID ({binding.DataID}) already bound to {existing.name}");
             return;
         }
 
@@ -63,8 +61,8 @@ public class DataBinder
         return string.IsNullOrEmpty(binding.DataID) || binding.Target == null;
     }
 
-    private void LogWarning(string message, DataBinding binding)
+    private void LogBindingFailed(GameObject gameObject, string message)
     {
-        Debug.LogWarning($"[DataBinder] {_gameObject.name} - {message} (ID : {binding.DataID}, Target : {binding.Target})");
+        Debug.LogWarning($"[DataBinder] {gameObject.name} binding failed: {message}");
     }
 }

@@ -1,7 +1,7 @@
 using UnityEngine;
 using UnityEngine.EventSystems;
 
-public class UI_Header : MonoBehaviour, IBeginDragHandler, IDragHandler
+public class UI_PopupHeader : MonoBehaviour, IBeginDragHandler, IDragHandler
 {
     [field: SerializeField]
     public bool CanDrag { get; set; } = true;

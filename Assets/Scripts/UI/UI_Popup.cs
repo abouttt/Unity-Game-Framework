@@ -2,7 +2,7 @@ using System;
 using UnityEngine;
 using UnityEngine.EventSystems;
 
-public class UI_Popup : UI_View, IPointerDownHandler
+public abstract class UI_Popup : UI_View, IPointerDownHandler
 {
     public event Action Focused;
     public event Action Showed;
@@ -31,7 +31,7 @@ public class UI_Popup : UI_View, IPointerDownHandler
 
         if (Body == null)
         {
-            Body = transform.GetChild(0).GetComponent<RectTransform>();
+            Body = transform.GetChild(0) as RectTransform;
         }
 
         Body.anchoredPosition = DefaultPosition;
@@ -52,7 +52,7 @@ public class UI_Popup : UI_View, IPointerDownHandler
         Hided?.Invoke();
     }
 
-    private void OnApplicationQuit()
+    private void OnDestroy()
     {
         ClearCallbacks();
     }

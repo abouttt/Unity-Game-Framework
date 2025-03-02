@@ -3,7 +3,7 @@ using UnityEngine;
 using Newtonsoft.Json.Linq;
 using System.Runtime.Serialization.Formatters.Binary;
 
-public class DataManager : MonoBehaviourSingleton<DataManager>
+public class DataManager : IManager
 {
     public static readonly string SavePath = $"{Application.streamingAssetsPath}/Saved";
     public static readonly string SaveFilePath = $"{SavePath}/Saves.json";
@@ -15,10 +15,8 @@ public class DataManager : MonoBehaviourSingleton<DataManager>
     private JObject _saveData = new();
     private readonly BinaryFormatter _binaryFormatter = new();
 
-    protected override void Init()
+    public void Initialize()
     {
-        base.Init();
-
         var directory = new DirectoryInfo(SavePath);
         if (!directory.Exists)
         {
@@ -31,30 +29,27 @@ public class DataManager : MonoBehaviourSingleton<DataManager>
         }
     }
 
-    public static void Save(string saveKey, JToken saveData)
+    public void Save(string saveKey, JToken saveData)
     {
-        var instance = Instance;
-
-        if (instance._saveData.ContainsKey(saveKey))
+        if (_saveData.ContainsKey(saveKey))
         {
-            instance._saveData[saveKey] = saveData;
+            _saveData[saveKey] = saveData;
         }
         else
         {
-            instance._saveData.Add(saveKey, saveData);
+            _saveData.Add(saveKey, saveData);
         }
 
-        instance.SaveToFile(SaveFilePath, instance._saveData.ToString());
+        SaveToFile(SaveFilePath, _saveData.ToString());
     }
 
-    public static bool Load<T>(string saveKey, out T saveData) where T : class
+    public bool Load<T>(string saveKey, out T saveData) where T : class
     {
-        var instance = Instance;
         saveData = null;
 
-        if (instance._saveData != null)
+        if (_saveData != null)
         {
-            var token = instance._saveData.GetValue(saveKey);
+            var token = _saveData.GetValue(saveKey);
             if (token != null)
             {
                 saveData = token.ToObject<T>();
@@ -64,11 +59,16 @@ public class DataManager : MonoBehaviourSingleton<DataManager>
         return saveData != null;
     }
 
-    public static void DeleteSaveData()
+    public void DeleteSaveData()
     {
         File.Delete(SaveFilePath);
         File.Delete(SaveMetaFilePath);
-        Instance._saveData?.RemoveAll();
+        _saveData?.RemoveAll();
+    }
+
+    public void Clear()
+    {
+
     }
 
     private void SaveToFile(string path, string json)

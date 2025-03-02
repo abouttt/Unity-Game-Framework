@@ -1,5 +1,4 @@
 using System;
-using System.Collections;
 using UnityEngine;
 
 public class LoadingScene : BaseScene
@@ -7,38 +6,36 @@ public class LoadingScene : BaseScene
     [SerializeField]
     private string _defaultSceneName;
 
-    protected override void Init()
+    protected override void Initialize()
     {
-        base.Init();
-        ClearManagers();
+        base.Initialize();
+        Managers.Clear();
         Resources.UnloadUnusedAssets();
         GC.Collect();
 
-        if (!SceneLoader.IsReadyToLoad)
+        Managers.Scene.Loaded += OnSceneLoaded;
+        if (!Managers.Scene.IsPrepare)
         {
-            SceneLoader.ReadyToLoad(_defaultSceneName);
+            Managers.Scene.PrepareLoad(_defaultSceneName);
         }
-
-        SceneLoader.LoadCompleted += () => StartCoroutine(LoadComplete());
     }
 
     private void Start()
     {
-        LoadResourcesByLabels(() => SceneLoader.StartLoad());
+        LoadResourcesByLabels(Managers.Scene.StartLoad);
     }
 
-    private IEnumerator LoadComplete()
+    private async void OnSceneLoaded()
     {
-        yield return YieldCache.WaitForSeconds(SceneSettings.Instance.FadeOutDuration);
-        SceneLoader.SwitchLoadedScene();
+        await SwitchLoadedScene();
+        Managers.Scene.Loaded -= OnSceneLoaded;
     }
 
     private void LoadResourcesByLabels(Action callback = null)
     {
-        var loadResourceLabels = SceneSettings.Instance[SceneLoader.NextSceneName].AddressableLabels;
+        var loadResourceLabels = Settings.Scene[Managers.Scene.CurrentSceneName].AddressableLabels;
         if (loadResourceLabels == null || loadResourceLabels.Length == 0)
         {
-            callback?.Invoke();
             return;
         }
 
@@ -47,7 +44,7 @@ public class LoadingScene : BaseScene
 
         foreach (var label in loadResourceLabels)
         {
-            ResourceManager.LoadAllAsync(label.labelString, _ =>
+            Managers.Resource.LoadAllAsync(label.labelString, _ =>
             {
                 if (++loadedCount == totalCount)
                 {
@@ -57,12 +54,9 @@ public class LoadingScene : BaseScene
         }
     }
 
-    private void ClearManagers()
+    private async Awaitable SwitchLoadedScene()
     {
-        InputManager.Clear();
-        PoolManager.Clear();
-        ResourceManager.Clear();
-        SoundManager.Clear();
-        UIManager.Clear();
+        await Awaitable.WaitForSecondsAsync(Settings.Scene.FadeOutDuration);
+        Managers.Scene.SwitchLoadedScene();
     }
 }

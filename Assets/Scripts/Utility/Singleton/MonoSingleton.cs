@@ -1,15 +1,15 @@
 using UnityEngine;
 
-public class MonoBehaviourSingleton<T> : MonoBehaviour where T : MonoBehaviour
+public class MonoSingleton<T> : MonoBehaviour where T : MonoBehaviour
 {
     private static T _instance;
-    private static bool _isApplicationQuitted;
+    private static bool _isApplicationQuitting;
 
     public static T Instance
     {
         get
         {
-            if (_isApplicationQuitted)
+            if (_isApplicationQuitting)
             {
                 return null;
             }
@@ -29,24 +29,6 @@ public class MonoBehaviourSingleton<T> : MonoBehaviour where T : MonoBehaviour
 
     private void Awake()
     {
-        Init();
-    }
-
-    private void OnDestroy()
-    {
-        if (!_isApplicationQuitted)
-        {
-            Dispose();
-        }
-    }
-
-    private void OnApplicationQuit()
-    {
-        _isApplicationQuitted = true;
-    }
-
-    protected virtual void Init()
-    {
         if (_instance == null)
         {
             _instance = this as T;
@@ -58,11 +40,16 @@ public class MonoBehaviourSingleton<T> : MonoBehaviour where T : MonoBehaviour
         }
     }
 
-    protected virtual void Dispose()
+    private void OnDestroy()
     {
         if (_instance == this)
         {
             _instance = null;
         }
+    }
+
+    private void OnApplicationQuit()
+    {
+        _isApplicationQuitting = true;
     }
 }

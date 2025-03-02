@@ -1,6 +1,6 @@
 using UnityEngine;
 
-public abstract class UI_View : UI_Base
+public class UI_View : UI_Base
 {
     [field: SerializeField]
     public UIType UIType { get; protected set; }
@@ -8,12 +8,11 @@ public abstract class UI_View : UI_Base
     [field: SerializeField]
     public bool IsValidForUISettings { get; private set; } = true;
 
-    public Canvas Canvas => _canvas;
-
-    private Canvas _canvas;
+    public Canvas Canvas { get; private set; }
 
     protected override void Init()
     {
-        _canvas = GetComponent<Canvas>();
+        Canvas = GetComponent<Canvas>();
+        Canvas.sortingOrder = (int)UIType;
     }
 }

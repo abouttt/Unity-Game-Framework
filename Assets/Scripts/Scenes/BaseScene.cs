@@ -1,29 +1,28 @@
 using UnityEngine;
 using UnityEngine.EventSystems;
-using UnityEngine.SceneManagement;
 
 public abstract class BaseScene : MonoBehaviour
 {
     private void Awake()
     {
-        string sceneName = SceneManager.GetActiveScene().name;
+        string sceneName = Managers.Scene.CurrentSceneName;
 
-        if (ResourceManager.Count == 0 &&
-            SceneSettings.Instance[sceneName].ReloadSceneWhenNoResources)
+        if (Managers.Resource.ResourceCount == 0 &&
+            Settings.Scene[sceneName].ReloadSceneWhenNoResources)
         {
-            SceneLoader.ReadyToLoad(sceneName);
+            Managers.Scene.PrepareLoad(sceneName);
         }
         else
         {
-            Init();
+            Initialize();
         }
     }
 
-    protected virtual void Init()
+    protected virtual void Initialize()
     {
         if (FindAnyObjectByType<EventSystem>() == null)
         {
-            ResourceManager.InstantiateAsync("EventSystem");
+            Managers.Resource.InstantiateAsync("EventSystem");
         }
     }
 }

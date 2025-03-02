@@ -1,116 +1,92 @@
 using System;
 using System.Collections.Generic;
 using UnityEngine;
+using Object = UnityEngine.Object;
 
-public class UIManager : MonoBehaviourSingleton<UIManager>
+public sealed class UIManager : IManager
 {
-    public static int Count => Instance._objects.Count;
-    public static int ActivePopupCount => Instance._activePopups.Count;
-    public static bool IsActiveHelperPopup => Instance._helperPopup != null;
-    public static bool IsActiveSelfishPopup => Instance._selfishPopup != null;
+    public int Count => _objects.Count;
+    public int ActivePopupCount => _activePopups.Count;
+    public bool IsActiveHelperPopup => _helperPopup != null;
+    public bool IsActiveSelfishPopup => _selfishPopup != null;
 
+    private Transform _root;
     private readonly Dictionary<UIType, Transform> _roots = new();
     private readonly Dictionary<Type, UI_View> _objects = new();
     private readonly LinkedList<UI_Popup> _activePopups = new();
     private UI_Popup _helperPopup;
     private UI_Popup _selfishPopup;
 
-    protected override void Init()
+    public void Initialize()
     {
-        base.Init();
-
-        foreach (UIType type in Enum.GetValues(typeof(UIType)))
-        {
-            var root = new GameObject($"{type}_Root").transform;
-            root.SetParent(transform);
-            _roots.Add(type, root);
-        }
+        _root = IManager.CreateRoot("UI_Root");
+        CreateUIRoots();
     }
 
-    protected override void Dispose()
+    public void Add(UI_View view)
     {
-        base.Dispose();
-        Clear();
-    }
+        var viewType = view.GetType();
 
-    public static void Register<T>(T ui) where T : UI_View
-    {
-        var instance = Instance;
-
-        if (!instance._objects.TryGetValue(typeof(T), out _))
+        if (!_objects.TryGetValue(viewType, out _))
         {
-            if (ui.UIType == UIType.Popup)
+            if (view.UIType == UIType.Popup)
             {
-                instance.RegisterPopup(ui as UI_Popup);
+                AddPopup(view as UI_Popup);
             }
 
-            ui.transform.SetParent(instance._roots[ui.UIType]);
-            instance._objects.Add(typeof(T), ui);
+            view.transform.SetParent(_roots[view.UIType]);
+            _objects.Add(viewType, view);
         }
         else
         {
-            Debug.LogWarning($"[UIManager.Register] {typeof(T)} is already registered.");
+            Object.Destroy(view.gameObject);
+            Debug.LogWarning($"[UIManager] {viewType} is destroyed, because it already exist");
         }
     }
 
-    public static void Unregister<T>(bool destory = false) where T : UI_View
+    public void Remove<T>() where T : UI_View
     {
-        var instance = Instance;
-
-        if (instance._objects.TryGetValue(typeof(T), out var ui))
+        if (_objects.TryGetValue(typeof(T), out var view))
         {
-            if (ui.UIType == UIType.Popup)
+            if (view.UIType == UIType.Popup)
             {
-                instance.UnregisterPopup(ui as UI_Popup);
+                RemovePopup(view as UI_Popup);
             }
 
-            ui.transform.SetParent(null);
-            instance._objects.Remove(typeof(T));
-
-            if (destory)
-            {
-                Destroy(ui.gameObject);
-            }
-        }
-        else
-        {
-            Debug.LogWarning($"[UIManager.Unregister] {typeof(T)} is not registered.");
+            _objects.Remove(typeof(T));
+            Object.Destroy(view.gameObject);
         }
     }
 
-    public static T Show<T>() where T : UI_View
+    public T Show<T>() where T : UI_View
     {
-        var instance = Instance;
-
-        if (instance._objects.TryGetValue(typeof(T), out var ui))
+        if (_objects.TryGetValue(typeof(T), out var view))
         {
-            if (ui.gameObject.activeSelf)
+            if (view.gameObject.activeSelf)
             {
-                return ui as T;
+                return view as T;
             }
 
-            if (ui.UIType == UIType.Popup)
+            if (view.UIType == UIType.Popup)
             {
-                return instance.ShowPopup<T>(ui as UI_Popup);
+                return ShowPopup<T>(view as UI_Popup);
             }
             else
             {
-                ui.gameObject.SetActive(true);
-                return ui as T;
+                view.gameObject.SetActive(true);
+                return view as T;
             }
         }
         else
         {
-            Debug.LogWarning($"[UIManager.Show] {typeof(T)} is not registered.");
+            Debug.LogWarning($"[UIManager] {typeof(T)} does not exist");
             return null;
         }
     }
 
-    public static void Hide<T>() where T : UI_View
+    public void Hide<T>() where T : UI_View
     {
-        var instance = Instance;
-
-        if (instance._objects.TryGetValue(typeof(T), out var ui))
+        if (_objects.TryGetValue(typeof(T), out var ui))
         {
             if (!ui.gameObject.activeSelf)
             {
@@ -119,7 +95,7 @@ public class UIManager : MonoBehaviourSingleton<UIManager>
 
             if (ui.UIType == UIType.Popup)
             {
-                instance.HidePopup(ui as UI_Popup);
+                HidePopup(ui as UI_Popup);
             }
             else
             {
@@ -128,45 +104,41 @@ public class UIManager : MonoBehaviourSingleton<UIManager>
         }
         else
         {
-            Debug.LogWarning($"[UIManager.Hide] {typeof(T)} is not registered.");
+            Debug.LogWarning($"[UIManager] {typeof(T)} does not exist");
         }
     }
 
-    public static void HideTopPopup()
+    public void HideAll(UIType uiType)
     {
-        var instance = Instance;
-
-        if (instance._activePopups.Count > 0)
-        {
-            instance.HidePopup(instance._activePopups.First.Value);
-        }
-    }
-
-    public static void HideAll(UIType uiType)
-    {
-        var instance = Instance;
-
         if (uiType == UIType.Popup)
         {
-            foreach (var popup in instance._activePopups)
+            foreach (var popup in _activePopups)
             {
                 popup.gameObject.SetActive(false);
             }
 
-            instance._activePopups.Clear();
-            instance._helperPopup = null;
-            instance._selfishPopup = null;
+            _activePopups.Clear();
+            _helperPopup = null;
+            _selfishPopup = null;
         }
         else
         {
-            foreach (Transform child in instance._roots[uiType])
+            foreach (Transform child in _roots[uiType])
             {
                 child.gameObject.SetActive(false);
             }
         }
     }
 
-    public static void ShowOrHide<T>() where T : UI_View
+    public void HideTopPopup()
+    {
+        if (_activePopups.Count > 0)
+        {
+            HidePopup(_activePopups.First.Value);
+        }
+    }
+
+    public void Toggle<T>() where T : UI_View
     {
         if (IsActive<T>())
         {
@@ -178,42 +150,40 @@ public class UIManager : MonoBehaviourSingleton<UIManager>
         }
     }
 
-    public static T Get<T>() where T : UI_View
+    public T Get<T>() where T : UI_View
     {
-        if (Instance._objects.TryGetValue(typeof(T), out var ui))
+        if (_objects.TryGetValue(typeof(T), out var view))
         {
-            return ui as T;
+            return view as T;
         }
 
         return null;
     }
 
-    public static bool Contains<T>() where T : UI_View
+    public bool Contains<T>() where T : UI_View
     {
-        return Instance._objects.ContainsKey(typeof(T));
+        return _objects.ContainsKey(typeof(T));
     }
 
-    public static bool IsActive<T>() where T : UI_View
+    public bool IsActive<T>() where T : UI_View
     {
-        return Instance._objects.TryGetValue(typeof(T), out var ui) && ui.gameObject.activeSelf;
+        return _objects.TryGetValue(typeof(T), out var view) && view.gameObject.activeSelf;
     }
 
-    public static void Clear()
+    public void Clear()
     {
-        var instance = Instance;
-
-        foreach (var ui in instance._objects.Values)
+        foreach (var ui in _objects.Values)
         {
-            Destroy(ui.gameObject);
+            Object.Destroy(ui.gameObject);
         }
 
-        instance._objects.Clear();
-        instance._activePopups.Clear();
-        instance._helperPopup = null;
-        instance._selfishPopup = null;
+        _objects.Clear();
+        _activePopups.Clear();
+        _helperPopup = null;
+        _selfishPopup = null;
     }
 
-    private void RegisterPopup(UI_Popup popup)
+    private void AddPopup(UI_Popup popup)
     {
         popup.Focused += () =>
         {
@@ -229,30 +199,33 @@ public class UIManager : MonoBehaviourSingleton<UIManager>
 
         popup.Showed += () =>
         {
-            InputManager.CursorLocked = false;
+            Managers.Input.CursorLocked = false;
         };
 
         popup.Hided += () =>
         {
             if (_activePopups.Count == 0)
             {
-                InputManager.CursorLocked = true;
+                Managers.Input.CursorLocked = true;
             }
         };
     }
 
-    private void UnregisterPopup(UI_Popup popup)
+    private void RemovePopup(UI_Popup popup)
     {
-        if (popup.IsHelper && _helperPopup == popup)
+        if (popup.gameObject.activeSelf)
         {
-            _helperPopup = null;
-        }
-        else if (popup.IsSelfish && _selfishPopup == popup)
-        {
-            _selfishPopup = null;
-        }
+            if (popup.IsHelper)
+            {
+                _helperPopup = null;
+            }
+            else if (popup.IsSelfish)
+            {
+                _selfishPopup = null;
+            }
 
-        _activePopups.Remove(popup);
+            _activePopups.Remove(popup);
+        }
     }
 
     private T ShowPopup<T>(UI_Popup popup) where T : UI_View
@@ -306,6 +279,19 @@ public class UIManager : MonoBehaviourSingleton<UIManager>
         foreach (var popup in _activePopups)
         {
             popup.Canvas.sortingOrder = (int)UIType.Top - count++;
+        }
+    }
+
+    private void CreateUIRoots()
+    {
+        var types = Enum.GetValues(typeof(UIType));
+        for (int i = types.Length - 1; i >= 0; i--)
+        {
+            var type = (UIType)types.GetValue(i);
+            var newGameObject = new GameObject($"{type}_Root");
+            var root = newGameObject.transform;
+            root.SetParent(_root);
+            _roots.Add(type, root);
         }
     }
 }

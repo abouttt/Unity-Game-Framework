@@ -1,71 +1,62 @@
 using UnityEngine;
 using UnityEngine.InputSystem;
 
-public sealed class InputManager : MonoBehaviourSingleton<InputManager>
+public sealed class InputManager : IManager
 {
-    public static bool Enabled
+    public bool Enabled
     {
-        get => Instance._inputActions.asset.enabled;
+        get => _inputActions.asset.enabled;
         set
         {
             if (value)
             {
-                Instance._inputActions.Enable();
+                _inputActions.Enable();
             }
             else
             {
-                Instance._inputActions.Disable();
+                _inputActions.Disable();
             }
         }
     }
 
-    public static bool CursorLocked
+    public bool CursorLocked
     {
-        get => Instance._cursorLocked;
+        get => Cursor.lockState == CursorLockMode.Locked;
         set
         {
-            Instance._cursorLocked = value;
             Cursor.visible = !value;
             Cursor.lockState = value ? CursorLockMode.Locked : CursorLockMode.None;
         }
     }
 
     private InputActions _inputActions;
-    private bool _cursorLocked;
 
-    protected override void Init()
+    public void Initialize()
     {
-        base.Init();
         _inputActions = new();
         Enabled = false;
         CursorLocked = false;
     }
 
-    protected override void Dispose()
+    public InputActionMap GetActionMap(string nameOrId, bool throwIfNotFound = false)
     {
-        base.Dispose();
-        _inputActions.Dispose();
+        return _inputActions.asset.FindActionMap(nameOrId, throwIfNotFound);
     }
 
-    public static InputActionMap GetActionMap(string nameOrId, bool throwIfNotFound = false)
+    public InputAction GetAction(string actionNameOrId, bool throwIfNotFound = false)
     {
-        return Instance._inputActions.asset.FindActionMap(nameOrId, throwIfNotFound);
+        return _inputActions.FindAction(actionNameOrId, throwIfNotFound);
     }
 
-    public static InputAction GetAction(string actionNameOrId, bool throwIfNotFound = false)
+    public string GetBindingPath(string actionNameOrId, int bindingIndex = 0)
     {
-        return Instance._inputActions.FindAction(actionNameOrId, throwIfNotFound);
-    }
-
-    public static string GetBindingPath(string actionNameOrId, int bindingIndex = 0)
-    {
-        string bindingPath = GetAction(actionNameOrId).bindings[bindingIndex].path;
+        var bindingPath = GetAction(actionNameOrId).bindings[bindingIndex].path;
         int lastSlashIndex = bindingPath.LastIndexOf('/');
-        string path = lastSlashIndex >= 0 ? bindingPath[(lastSlashIndex + 1)..] : bindingPath;
+        var path = lastSlashIndex >= 0 ? bindingPath[(lastSlashIndex + 1)..] : bindingPath;
         return path.ToUpper();
     }
 
-    public static void Clear()
+    public void Clear()
     {
         Enabled = false;
     }

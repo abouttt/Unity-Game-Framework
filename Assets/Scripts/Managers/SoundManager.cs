@@ -3,81 +3,34 @@ using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.Audio;
 
-public sealed class SoundManager : MonoBehaviourSingleton<SoundManager>
+public sealed class SoundManager : IManager
 {
-    public static float MasterVolume
-    {
-        get => Instance.GetVolume("Master");
-        set => Instance.SetVolume("Master", value);
-    }
-
-    [SerializeField, ReadOnly]
+    private Transform _root;
     private AudioMixer _audioMixer;
-
     private readonly List<AudioSource> _audioSources = new();
 
-    protected override void Init()
+    public void Initialize()
     {
-        base.Init();
-
-        _audioMixer = Resources.Load<AudioMixer>("AudioMixer");
-        if (_audioMixer == null)
-        {
-            Debug.LogWarning($"[SoundManager.Init] AudioMixer does not exist. Create an audio mixer in the Resources folder.");
-        }
-
-        foreach (SoundType type in Enum.GetValues(typeof(SoundType)))
-        {
-            string typeName = type.ToString();
-
-            var go = new GameObject(typeName);
-            go.transform.SetParent(transform);
-
-            var audioSource = go.AddComponent<AudioSource>();
-            var group = _audioMixer.FindMatchingGroups(typeName);
-            if (group.Length > 0)
-            {
-                audioSource.outputAudioMixerGroup = group[0];
-            }
-            else
-            {
-                Debug.LogWarning($"[SoundManager.Init] {typeName} audio mixer group does not exist.");
-            }
-
-            _audioSources.Add(audioSource);
-        }
-
-        _audioSources[(int)SoundType.BGM].loop = true;
+        _root = IManager.CreateRoot("Sound_Root");
+        LoadAudioMixer();
+        CreateAudioSources();
     }
 
-    protected override void Dispose()
+    public void Play2D(string key, SoundType soundType)
     {
-        base.Dispose();
-        Clear();
-
-        foreach (var audioSource in _audioSources)
-        {
-            Destroy(audioSource.gameObject);
-        }
-
-        _audioSources.Clear();
+        Managers.Resource.LoadAsync<AudioClip>(key, clip => Play2D(clip, soundType));
     }
 
-    public static void Play2D(string key, SoundType type)
-    {
-        ResourceManager.LoadAsync<AudioClip>(key, clip => Play2D(clip, type));
-    }
-
-    public static void Play2D(AudioClip clip, SoundType type)
+    public void Play2D(AudioClip clip, SoundType soundType)
     {
         if (clip == null)
         {
             return;
         }
 
-        var audioSource = Instance._audioSources[(int)type];
+        var audioSource = _audioSources[(int)soundType];
 
-        if (type == SoundType.BGM)
+        if (soundType == SoundType.BGM)
         {
             if (audioSource.isPlaying)
             {
@@ -93,54 +46,60 @@ public sealed class SoundManager : MonoBehaviourSingleton<SoundManager>
         }
     }
 
-    public static void Stop2D(SoundType type)
+    public void Stop2D(SoundType soundType)
     {
-        var audioSource = Instance._audioSources[(int)type];
+        var audioSource = _audioSources[(int)soundType];
         if (audioSource.isPlaying)
         {
             audioSource.Stop();
         }
     }
 
-    public static void Play3D(string key, Vector3 position, Transform parent = null, float minDistance = 0f, float maxDistance = 15f)
-    {
-        ResourceManager.LoadAsync<AudioClip>(key, clip => Play3D(clip, position, parent, minDistance, maxDistance));
-    }
-
-    public static void Play3D(AudioClip clip, Vector3 position, Transform parent = null, float minDistance = 0f, float maxDistance = 15f)
+    public void Play3D(AudioClip clip, SoundType type, Vector3 position, Transform parent = null, float minDistance = 0f, float maxDistance = 15f)
     {
         if (clip == null)
         {
             return;
         }
 
-        ResourceManager.InstantiateAsync<DDDSoundPlayer>("DDDSoundPlayer", soundPlayer =>
+        Managers.Resource.InstantiateAsync<DDDSoundPlayer>("DDDSoundPlayer", soundPlayer =>
         {
-            soundPlayer.transform.SetParent(parent);
+            var audioSource = _audioSources[(int)type];
             soundPlayer.transform.localPosition = position;
-            soundPlayer.Play(clip, minDistance, maxDistance);
-        });
+            soundPlayer.Play(clip, audioSource.outputAudioMixerGroup, minDistance, maxDistance);
+        }
+        , parent, true);
     }
 
-    public static float GetVolume(SoundType type)
+    public float GetMasterVolume()
     {
-        return Instance.GetVolume(type.ToString());
+        return GetVolume("Master");
     }
 
-    public static void SetVolume(SoundType type, float volume)
+    public void SetMasterVolume(float volume)
     {
-        Instance.SetVolume(type.ToString(), volume);
+        SetVolume("Master", volume);
     }
 
-    public static void Clear()
+    public float GetVolume(SoundType type)
     {
-        foreach (var audioSource in Instance._audioSources)
+        return GetVolume(type.ToString());
+    }
+
+    public void SetVolume(SoundType type, float volume)
+    {
+        SetVolume(type.ToString(), volume);
+    }
+
+    public void Clear()
+    {
+        foreach (var audioSource in _audioSources)
         {
             audioSource.Stop();
             audioSource.clip = null;
         }
 
-        PoolManager.RemovePool("DDDSoundPlayer");
+        Managers.Pool.RemovePool("DDDSoundPlayer");
     }
 
     private float GetVolume(string name)
@@ -163,5 +122,40 @@ public sealed class SoundManager : MonoBehaviourSingleton<SoundManager>
     private float DecibelToLinear(float dB)
     {
         return Mathf.Pow(10f, dB / 20f);
+    }
+
+    private void LoadAudioMixer()
+    {
+        _audioMixer = Resources.Load<AudioMixer>("AudioMixer");
+        if (_audioMixer == null)
+        {
+            Debug.LogWarning($"[SoundManager] AudioMixer does not exist. " +
+                $"Make sure there is an audio mixer named \"AudioMixer\" in your Resources folder.");
+        }
+    }
+
+    private void CreateAudioSources()
+    {
+        foreach (SoundType type in Enum.GetValues(typeof(SoundType)))
+        {
+            var typeName = type.ToString();
+            var newGameObject = new GameObject(typeName);
+            var audioSource = newGameObject.AddComponent<AudioSource>();
+            var group = _audioMixer.FindMatchingGroups(typeName);
+
+            if (group.Length > 0)
+            {
+                audioSource.outputAudioMixerGroup = group[0];
+            }
+            else
+            {
+                Debug.LogWarning($"[SoundManager] {typeName} audio mixer group does not exist.");
+            }
+
+            _audioSources.Add(audioSource);
+            newGameObject.transform.SetParent(_root);
+        }
+
+        _audioSources[(int)SoundType.BGM].loop = true;
     }
 }

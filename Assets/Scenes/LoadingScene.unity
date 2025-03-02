@@ -376,8 +376,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: ad6ca080054b1f44ea8f061f93495bfb, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  <SceneAddress>k__BackingField: LoadingScene.unity
-  _defaultSceneAddress: DevScene.unity
+  _defaultSceneName: DevScene
 --- !u!1660057539 &9223372036854775807
 SceneRoots:
   m_ObjectHideFlags: 0

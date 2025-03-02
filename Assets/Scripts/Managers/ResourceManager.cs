@@ -5,30 +5,20 @@ using UnityEngine.ResourceManagement.AsyncOperations;
 using AYellowpaper.SerializedCollections;
 using Object = UnityEngine.Object;
 
-public sealed class ResourceManager : MonoBehaviourSingleton<ResourceManager>
+public sealed class ResourceManager : IManager
 {
-    public static int Count => Instance._resources.Count;
+    public int ResourceCount => _resources.Count;
 
-    [SerializeField, ReadOnly, SerializedDictionary("Key", "Resource")]
-    private SerializedDictionary<string, Object> _resources = new();
+    private readonly SerializedDictionary<string, Object> _resources = new();
 
-    protected override void Init()
+    public void Initialize()
     {
-        base.Init();
         Addressables.InitializeAsync();
     }
 
-    protected override void Dispose()
+    public void LoadAsync<T>(string key, Action<T> callback = null) where T : Object
     {
-        base.Dispose();
-        Clear();
-    }
-
-    public static void LoadAsync<T>(string key, Action<T> callback) where T : Object
-    {
-        var instance = Instance;
-
-        if (instance._resources.TryGetValue(key, out var resource))
+        if (_resources.TryGetValue(key, out var resource))
         {
             callback?.Invoke(resource as T);
         }
@@ -38,27 +28,28 @@ public sealed class ResourceManager : MonoBehaviourSingleton<ResourceManager>
             {
                 if (handle.Status == AsyncOperationStatus.Succeeded)
                 {
-                    if (instance._resources.ContainsKey(key))
+                    if (_resources.ContainsKey(key))
                     {
                         Addressables.Release(handle);
                     }
                     else
                     {
-                        instance._resources.Add(key, handle.Result);
+                        _resources.Add(key, handle.Result);
                     }
 
-                    callback?.Invoke(instance._resources[key] as T);
+                    callback?.Invoke(_resources[key] as T);
                 }
                 else
                 {
-                    Debug.LogWarning($"[ResourceManager.LoadAsync] Failed to load asset with key : {key}");
+                    Debug.LogWarning($"[ResourceManager] Failed to load asset with key: {key}");
+                    Addressables.Release(handle);
                     callback?.Invoke(null);
                 }
             };
         }
     }
 
-    public static void LoadAllAsync(string label, Action<Object[]> callback = null)
+    public void LoadAllAsync(string label, Action<Object[]> callback = null)
     {
         Addressables.LoadResourceLocationsAsync(label, typeof(Object)).Completed += handle =>
         {
@@ -82,71 +73,67 @@ public sealed class ResourceManager : MonoBehaviourSingleton<ResourceManager>
             }
             else
             {
-                Debug.LogWarning($"[ResourceManager.LoadAllAsync] Failed to load asset with label : {label}");
+                Debug.LogWarning($"[ResourceManager] Failed to load asset with label: {label}");
                 callback?.Invoke(Array.Empty<Object>());
             }
         };
     }
 
-    public static void InstantiateAsync(string key, Action<GameObject> callback = null, Transform parent = null, bool pooling = false)
+    public void InstantiateAsync(string key, Action<GameObject> callback = null, Transform parent = null, bool pooling = false)
     {
         LoadAsync<GameObject>(key, prefab =>
         {
-            var go = pooling ? PoolManager.Get(prefab, parent) : Instantiate(prefab, parent);
-            callback?.Invoke(go);
+            var gameObject = pooling ? Managers.Pool.Get(prefab, parent) : Object.Instantiate(prefab, parent);
+            callback?.Invoke(gameObject);
         });
     }
 
-    public static void InstantiateAsync<T>(string key, Action<T> callback = null, Transform parent = null, bool pooling = false)
+    public void InstantiateAsync<T>(string key, Action<T> callback = null, Transform parent = null, bool pooling = false)
         where T : Component
     {
-        InstantiateAsync(key, go =>
+        InstantiateAsync(key, gameObject =>
         {
-            var component = go.GetComponent<T>();
+            var component = gameObject.GetComponent<T>();
             callback?.Invoke(component);
         },
         parent, pooling);
     }
 
-    public static void Release(string key)
+    public void Release(string key)
     {
-        var instance = Instance;
-
-        if (instance._resources.TryGetValue(key, out var resource))
+        if (_resources.TryGetValue(key, out var resource))
         {
             Addressables.Release(resource);
-            instance._resources.Remove(key);
+            _resources.Remove(key);
         }
         else
         {
-            Debug.LogWarning($"[ResourceManager.Release] Failed to release asset with key : {key}");
+            Debug.LogWarning($"[ResourceManager] Failed to release asset with key: {key}");
         }
     }
 
-    public static void Destroy(GameObject go)
+    public void Destroy(GameObject gameObject)
     {
-        if (go == null)
+        if (gameObject == null)
         {
             return;
         }
 
-        if (PoolManager.Release(go))
+        if (Managers.Pool.Release(gameObject))
         {
             return;
         }
 
-        Object.Destroy(go);
+        Object.Destroy(gameObject);
     }
 
-    public static void Clear()
+    public void Clear()
     {
-        var instance = Instance;
-
-        foreach (var kvp in instance._resources)
+        foreach (var kvp in _resources)
         {
             Addressables.Release(kvp.Value);
         }
 
-        instance._resources.Clear();
+        _resources.Clear();
     }
 }

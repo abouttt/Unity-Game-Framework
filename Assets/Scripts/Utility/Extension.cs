@@ -2,28 +2,28 @@ using UnityEngine;
 
 public static class Extension
 {
-    public static T GetOrAddComponent<T>(this GameObject go) where T : Component
+    public static T GetOrAddComponent<T>(this GameObject gameObject) where T : Component
     {
-        return Util.GetOrAddComponent<T>(go);
+        return Util.GetOrAddComponent<T>(gameObject);
     }
 
-    public static GameObject FindChild(this GameObject go, string name = null, bool recursive = false)
+    public static Transform FindChild(this Transform parent, string name, bool recursive = false)
     {
-        return Util.FindChild(go, name, recursive);
+        return Util.FindChild(parent, name, recursive);
     }
 
-    public static T FindChild<T>(this GameObject go, string name = null, bool recursive = false) where T : Object
+    public static Transform FindChildWithTag(this Transform parent, string tag, bool recursive = false)
     {
-        return Util.FindChild<T>(go, name, recursive);
+        return Util.FindChildWithTag(parent, tag, recursive);
     }
 
-    public static Transform FindChildWithTag(this Transform parent, string tag)
+    public static bool IsInLayerMask(this GameObject gameObject, LayerMask layerMask)
     {
-        return Util.FindChildWithTag(parent, tag);
+        return Util.IsInLayerMask(gameObject, layerMask);
     }
 
-    public static bool IsInLayerMask(this GameObject go, LayerMask layerMask)
+    public static string ToSnake(this string str)
     {
-        return Util.IsInLayerMask(go, layerMask);
+        return Util.ToSnake(str);
     }
 }

@@ -1,41 +1,32 @@
-using System.Linq;
+using System.Text.RegularExpressions;
 using UnityEngine;
 
 public static class Util
 {
-    public static T GetOrAddComponent<T>(GameObject go) where T : Component
+    public static T GetOrAddComponent<T>(GameObject gameObject) where T : Component
     {
-        if (go.TryGetComponent<T>(out var component))
+        if (gameObject.TryGetComponent<T>(out var component))
         {
             return component;
         }
 
-        return go.AddComponent<T>();
+        return gameObject.AddComponent<T>();
     }
 
-    public static GameObject FindChild(GameObject go, string name = null, bool recursive = false)
+    public static Transform FindChild(Transform parent, string name, bool recursive = false)
     {
-        var transform = FindChild<Transform>(go, name, recursive);
-        return transform == null ? null : transform.gameObject;
-    }
-
-    public static T FindChild<T>(GameObject go, string name = null, bool recursive = false) where T : Object
-    {
-        if (recursive)
+        foreach (Transform child in parent)
         {
-            return go.GetComponentsInChildren<T>().FirstOrDefault(component => string.IsNullOrEmpty(name) || component.name.Equals(name));
-        }
-        else
-        {
-            for (int i = 0; i < go.transform.childCount; i++)
+            if (child.name == name)
             {
-                var transform = go.transform.GetChild(i);
-                if (string.IsNullOrEmpty(name) || transform.name.Equals(name))
+                return child;
+            }
+            else if (recursive)
+            {
+                Transform found = FindChild(child, name, recursive);
+                if (found != null)
                 {
-                    if (transform.TryGetComponent<T>(out var component))
-                    {
-                        return component;
-                    }
+                    return found;
                 }
             }
         }
@@ -43,7 +34,7 @@ public static class Util
         return null;
     }
 
-    public static Transform FindChildWithTag(Transform parent, string tag)
+    public static Transform FindChildWithTag(Transform parent, string tag, bool recursive = false)
     {
         foreach (Transform child in parent)
         {
@@ -51,13 +42,52 @@ public static class Util
             {
                 return child;
             }
+            else if (recursive)
+            {
+                Transform found = FindChildWithTag(child, tag, recursive);
+                if (found != null)
+                {
+                    return found;
+                }
+            }
         }
 
         return null;
     }
 
-    public static bool IsInLayerMask(GameObject go, LayerMask layerMask)
+    public static bool IsInLayerMask(GameObject gameObject, LayerMask layerMask)
     {
-        return (layerMask.value & (1 << go.layer)) != 0;
+        return (layerMask.value & (1 << gameObject.layer)) != 0;
+    }
+
+    public static float ClampAngle(float angle, float min, float max)
+    {
+        if (angle > 180f)
+        {
+            return angle - 360f;
+        }
+
+        if (angle < -180f)
+        {
+            return angle + 360f;
+        }
+
+        return Mathf.Clamp(angle, min, max);
+    }
+
+    public static string ToSnake(string str)
+    {
+        if (string.IsNullOrEmpty(str))
+        {
+            return str;
+        }
+
+        // 소문자 또는 숫자와 대문자 사이에 언더스코어를 추가
+        str = Regex.Replace(str, "([a-z0-9])([A-Z])", "$1_$2");
+
+        // 대문자가 연속된 후, 다음에 나오는 대문자와 소문자 또는 숫자 사이에 언더스코어를 추가
+        str = Regex.Replace(str, "([A-Z]+)([A-Z][a-z0-9])", "$1_$2");
+
+        return str;
     }
 }

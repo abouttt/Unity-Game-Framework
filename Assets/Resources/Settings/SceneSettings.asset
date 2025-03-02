@@ -12,6 +12,8 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 867e9317f32794c4cb9989b8244700d9, type: 3}
   m_Name: SceneSettings
   m_EditorClassIdentifier: 
+  <LoadingSceneName>k__BackingField: LoadingScene
+  <LoadingDelay>k__BackingField: 0
   <FadeInDuration>k__BackingField: 0.5
   <FadeOutDuration>k__BackingField: 0.5
   _settings:
@@ -21,10 +23,12 @@ MonoBehaviour:
         <AddressableLabels>k__BackingField:
         - m_LabelString: Default
         <ReloadSceneWhenNoResources>k__BackingField: 1
+        <BGM>k__BackingField: {fileID: 0}
         <LoadingBackground>k__BackingField: {fileID: 0}
     - Key: LoadingScene
       Value:
         <AddressableLabels>k__BackingField:
         - m_LabelString: Default
         <ReloadSceneWhenNoResources>k__BackingField: 0
+        <BGM>k__BackingField: {fileID: 0}
         <LoadingBackground>k__BackingField: {fileID: 0}

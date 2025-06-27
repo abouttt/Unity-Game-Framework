@@ -1,73 +1,78 @@
 using System.Collections.Generic;
 using UnityEngine;
 
-public class ObjectPool<T> where T : Component
+public class ObjectPool
 {
-    private readonly T _prefab;
+    private readonly GameObject _prefab;
     private readonly Transform _root;
-    private readonly HashSet<T> _activeObjects = new();
-    private readonly Stack<T> _inactiveObjects = new();
+    private readonly HashSet<GameObject> _activeObjects = new();
+    private readonly Stack<GameObject> _inactiveObjects = new();
 
-    public ObjectPool(T prefab, int count, Transform parent = null)
+    public ObjectPool(GameObject prefab, int count, Transform parent)
     {
         _prefab = prefab;
-        _root = new GameObject($"{typeof(T).Name}_Pool").transform;
+        _root = new GameObject($"{prefab.name}_Pool").transform;
         _root.SetParent(parent);
 
         for (int i = 0; i < count; i++)
         {
-            var obj = Create();
-            Deactivate(obj);
+            var go = Create();
+            Deactivate(go, false);
         }
     }
 
-    public T Get(Transform parent = null)
+    public GameObject Get(Transform parent = null)
     {
-        T obj = null;
+        GameObject go = null;
 
         while (_inactiveObjects.Count > 0)
         {
-            obj = _inactiveObjects.Pop();
-            if (obj != null)
+            go = _inactiveObjects.Pop();
+            if (go != null)
             {
                 break;
             }
         }
 
-        if (obj == null)
+        if (go == null)
         {
-            obj = Create();
+            go = Create();
         }
 
         if (parent != null)
         {
-            obj.transform.SetParent(parent);
+            go.transform.SetParent(parent);
         }
 
-        obj.gameObject.SetActive(true);
-        (obj as IPoolable)?.OnSpawn();
-        _activeObjects.Add(obj);
+        go.SetActive(true);
 
-        return obj;
+        if (go.TryGetComponent<IPoolable>(out var poolable))
+        {
+            poolable.OnSpawn();
+        }
+
+        _activeObjects.Add(go);
+
+        return go;
     }
 
-    public bool Return(T obj)
+    public bool Return(GameObject go)
     {
-        if (!_activeObjects.Remove(obj))
+        if (!_activeObjects.Remove(go))
         {
             return false;
         }
 
-        Deactivate(obj);
+        Deactivate(go);
 
         return true;
     }
 
     public void ReturnAll()
     {
-        foreach (var obj in _activeObjects)
+        foreach (var go in _activeObjects)
         {
-            Deactivate(obj);
+            Deactivate(go);
         }
 
         _activeObjects.Clear();
@@ -75,19 +80,19 @@ public class ObjectPool<T> where T : Component
 
     public void Clear()
     {
-        foreach (var obj in _activeObjects)
+        foreach (var go in _activeObjects)
         {
-            if (obj != null)
+            if (go != null)
             {
-                Object.Destroy(obj.gameObject);
+                Object.Destroy(go);
             }
         }
 
-        foreach (var obj in _inactiveObjects)
+        foreach (var go in _inactiveObjects)
         {
-            if (obj != null)
+            if (go != null)
             {
-                Object.Destroy(obj.gameObject);
+                Object.Destroy(go);
             }
         }
 
@@ -105,21 +110,25 @@ public class ObjectPool<T> where T : Component
         }
     }
 
-    private T Create()
+    private GameObject Create()
     {
-        var obj = Object.Instantiate(_prefab, _root);
-        obj.name = _prefab.name;
-        return obj;
+        var go = Object.Instantiate(_prefab, _root);
+        go.name = _prefab.name;
+        return go;
     }
 
-    private void Deactivate(T obj)
+    private void Deactivate(GameObject go, bool callDespawn = true)
     {
-        if (obj != null)
+        if (go != null)
         {
-            (obj as IPoolable)?.OnDespawn();
-            obj.gameObject.SetActive(false);
-            obj.transform.SetParent(_root);
-            _inactiveObjects.Push(obj);
+            if (callDespawn && go.TryGetComponent<IPoolable>(out var poolable))
+            {
+                poolable.OnDespawn();
+            }
+
+            go.SetActive(false);
+            go.transform.SetParent(_root);
+            _inactiveObjects.Push(go);
         }
     }
 }

@@ -1,127 +1,113 @@
-using AYellowpaper.SerializedCollections;
-using System;
-using UnityEditor;
 using UnityEngine;
+using AYellowpaper.SerializedCollections;
 
 public partial class PoolManager : MonoSingleton<PoolManager>
 {
-    private readonly SerializedDictionary<Type, object> _genericPools = new();
+    [SerializeField, ReadOnly]
+    private SerializedDictionary<string, ObjectPool> _pools = new();
 
-    public void CreatePool<T>(T prefab, int count = 5) where T : Component
+    public void CreatePool(GameObject prefab, int count = 5)
     {
         if (prefab == null)
         {
-            Debug.LogWarning("[PoolManager] Prefab cannot be null.");
             return;
         }
 
-        var type = typeof(T);
+        var key = prefab.name;
 
-        if (_genericPools.ContainsKey(type))
+        if (_pools.ContainsKey(key))
         {
-            Debug.LogWarning($"[PoolManager] Generic pool for {type.Name} already exists.");
+            Debug.LogWarning($"[PoolManager] Pool for {key} already exists.");
             return;
         }
 
-        var pool = new ObjectPool<T>(prefab, count, transform);
-        _genericPools[type] = pool;
+        var pool = new ObjectPool(prefab, count, transform);
+        _pools[key] = pool;
     }
 
-    public T Get<T>(T prefab, Transform parent = null, bool autoCreate = true) where T : Component
+    public GameObject Get(GameObject prefab, Transform parent = null, bool autoCreate = true)
     {
         if (prefab == null)
         {
-            Debug.LogWarning("[PoolManager] Prefab cannot be null.");
             return null;
         }
 
-        var type = typeof(T);
+        var key = prefab.name;
 
-        if (!_genericPools.TryGetValue(type, out var poolObj))
+        if (!_pools.TryGetValue(key, out var pool))
         {
             if (!autoCreate)
             {
-                Debug.LogWarning($"[PoolManager] Generic pool for {type.Name} not found.");
+                Debug.LogWarning($"[PoolManager] Pool for {key} does not exist and autoCreate is false.");
                 return null;
             }
 
             CreatePool(prefab);
-            poolObj = _genericPools[type];
+            pool = _pools[key];
         }
 
-        return ((ObjectPool<T>)poolObj).Get(parent);
+        return pool.Get(parent);
     }
 
-    public bool Return<T>(T obj) where T : Component
+    public bool Return(GameObject go)
     {
-        if (obj == null)
+        if (go == null)
         {
             return false;
         }
 
-        var type = typeof(T);
+        var key = go.name;
 
-        if (_genericPools.TryGetValue(type, out var poolObj))
+        if (_pools.TryGetValue(key, out var pool))
         {
-            if (((ObjectPool<T>)poolObj).Return(obj))
+            if (pool.Return(go))
             {
                 return true;
             }
         }
 
-        Debug.LogWarning($"[PoolManager] Generic pool for {type.Name} not found for return.");
+        Debug.LogWarning($"[PoolManager] Pool for {key} does not exist or object cannot be returned.");
+
         return false;
     }
 
-    public void ReturnAll<T>() where T : Component
+    public void ReturnAll(string key)
     {
-        if (_genericPools.TryGetValue(typeof(T), out var poolObj))
+        if (_pools.TryGetValue(key, out var pool))
         {
-            ((ObjectPool<T>)poolObj).ReturnAll();
+            pool.ReturnAll();
         }
     }
 
-    public void ClearGeneric<T>() where T : Component
+    public void ClearPool(string key)
     {
-        if (_genericPools.TryGetValue(typeof(T), out var poolObj))
+        if (_pools.TryGetValue(key, out var pool))
         {
-            ((ObjectPool<T>)poolObj).Clear();
+            pool.Clear();
         }
     }
 
-    public void ClearAllGeneric()
+    public void RemovePool(string key)
     {
-        foreach (var poolObj in _genericPools.Values)
+        if (_pools.TryGetValue(key, out var pool))
         {
-            var method = poolObj.GetType().GetMethod("Clear");
-            method?.Invoke(poolObj, null);
+            pool.Dispose();
+            _pools.Remove(key);
         }
     }
 
-    public void DisposeGeneric<T>() where T : Component
+    public bool Contains(string key)
     {
-        var type = typeof(T);
-        if (_genericPools.TryGetValue(type, out var poolObj))
-        {
-            ((ObjectPool<T>)poolObj).Dispose();
-            _genericPools.Remove(type);
-        }
-    }
-
-    public void DisposeAllGeneric()
-    {
-        foreach (var poolObj in _genericPools.Values)
-        {
-            var method = poolObj.GetType().GetMethod("Dispose");
-            method?.Invoke(poolObj, null);
-        }
-
-        _genericPools.Clear();
+        return _pools.ContainsKey(key);
     }
 
     public void Clear()
     {
-        DisposeAllGeneric();
-        _genericPools.Clear();
+        foreach (var pool in _pools.Values)
+        {
+            pool.Dispose();
+        }
+
+        _pools.Clear();
     }
 }

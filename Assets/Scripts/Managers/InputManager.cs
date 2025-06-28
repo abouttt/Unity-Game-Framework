@@ -42,7 +42,7 @@ public class InputManager : MonoSingleton<InputManager>
     protected override void Awake()
     {
         base.Awake();
-        _inputActions = InputSystem.actions;
+        _inputActions = Resources.Load<GameSettings>("GameSettings").InputActions;
         CursorLocked = false;
     }
 
@@ -134,7 +134,7 @@ public class InputManager : MonoSingleton<InputManager>
 
     private void OnRebindComplete(InputAction action, Action onComplete, Action onCancel)
     {
-        if (HasConflict(action))
+        if (HasSameBinding(action))
         {
             if (!string.IsNullOrEmpty(_rebindingTargetPath))
             {
@@ -158,7 +158,7 @@ public class InputManager : MonoSingleton<InputManager>
         callback?.Invoke();
     }
 
-    private bool HasConflict(InputAction action)
+    private bool HasSameBinding(InputAction action)
     {
         var newBinding = action.bindings[0];
         foreach (var binding in action.actionMap.bindings)

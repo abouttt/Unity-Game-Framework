@@ -4,87 +4,50 @@ using UnityEngine.InputSystem;
 
 public class InputManager : MonoSingleton<InputManager>
 {
-    public bool IsEnabled => _inputActions != null && _inputActions.enabled;
+    public bool Enabled
+    {
+        get => _inputActions.enabled;
+        set
+        {
+            if (_inputActions.enabled != value)
+            {
+                if (value)
+                {
+                    _inputActions.Enable();
+                }
+                else
+                {
+                    _inputActions.Disable();
+                }
+            }
+        }
+    }
 
     public bool CursorLocked
     {
         get => Cursor.lockState == CursorLockMode.Locked;
-        set => SetCursorState(!value, value ? CursorLockMode.Locked : CursorLockMode.None);
+        set
+        {
+            Cursor.visible = !value;
+            Cursor.lockState = value ? CursorLockMode.Locked : CursorLockMode.None;
+        }
     }
 
     private InputActionAsset _inputActions;
     private InputActionRebindingExtensions.RebindingOperation _rebindingOp;
     private string _rebindingTargetPath = null;
-    private IInputContext _currentContext;
 
     private const string BindingPrefsKey = "InputBindings";
 
     protected override void Awake()
     {
         base.Awake();
+        _inputActions = InputSystem.actions;
         CursorLocked = false;
-    }
-
-    public void Initialize(InputActionAsset inputActions)
-    {
-        if (inputActions == null)
-        {
-            Debug.LogError("[InputManager] InputActionAsset is null during initialization.");
-            return;
-        }
-
-        _inputActions = inputActions;
-        _inputActions.Disable();
-    }
-
-    public void SetCursorState(bool visible, CursorLockMode mode)
-    {
-        Cursor.visible = visible;
-        Cursor.lockState = mode;
-    }
-
-    public void EnableInput(bool enabled)
-    {
-        if (_inputActions == null)
-        {
-            return;
-        }
-
-        if (enabled)
-        {
-            _inputActions.Enable();
-        }
-        else
-        {
-            _inputActions.Disable();
-        }
-    }
-
-    public void SwitchContext(IInputContext context)
-    {
-        if (_inputActions == null)
-        {
-            Debug.LogWarning("[InputManager] Cannot switch context. InputActionAsset is null.");
-            return;
-        }
-
-        _inputActions.Disable();
-
-        _currentContext?.Unbind();
-        _currentContext = context;
-        _currentContext?.Bind();
-
-        _inputActions.Enable();
     }
 
     public InputActionMap FindActionMap(string nameOrId)
     {
-        if (_inputActions == null)
-        {
-            Debug.LogWarning("[InputManager] InputActionAsset is null.");
-            return null;
-        }
-
         var actionMap = _inputActions.FindActionMap(nameOrId);
         if (actionMap == null)
         {
@@ -96,12 +59,6 @@ public class InputManager : MonoSingleton<InputManager>
 
     public InputAction FindAction(string nameOrId)
     {
-        if (_inputActions == null)
-        {
-            Debug.LogWarning("[InputManager] InputActionAsset is null.");
-            return null;
-        }
-
         var action = _inputActions.FindAction(nameOrId);
         if (action == null)
         {
@@ -109,6 +66,18 @@ public class InputManager : MonoSingleton<InputManager>
         }
 
         return action;
+    }
+
+    public void SwitchActionMap(string nameOrId)
+    {
+        var actionMap = FindActionMap(nameOrId);
+        if (actionMap == null)
+        {
+            return;
+        }
+
+        _inputActions.Disable();
+        actionMap.Enable();
     }
 
     public string GetBindingDisplayName(string actionNameOrId, int bindingIndex = 0)
@@ -147,11 +116,6 @@ public class InputManager : MonoSingleton<InputManager>
 
     public void SaveBindings()
     {
-        if (_inputActions == null)
-        {
-            return;
-        }
-
         string json = _inputActions.SaveBindingOverridesAsJson();
         PlayerPrefs.SetString(BindingPrefsKey, json);
         PlayerPrefs.Save();
@@ -160,11 +124,6 @@ public class InputManager : MonoSingleton<InputManager>
 
     public void LoadBindings()
     {
-        if (_inputActions == null)
-        {
-            return;
-        }
-
         if (PlayerPrefs.HasKey(BindingPrefsKey))
         {
             string json = PlayerPrefs.GetString(BindingPrefsKey);

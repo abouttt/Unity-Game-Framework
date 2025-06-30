@@ -1,4 +1,4 @@
-namespace GameFramework.Input
+namespace GameFramework
 {
     public enum InputCursorMode
     {

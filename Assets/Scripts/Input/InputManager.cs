@@ -2,7 +2,7 @@ using System;
 using UnityEngine;
 using UnityEngine.InputSystem;
 
-namespace GameFramework.Input
+namespace GameFramework
 {
     public sealed class InputManager
     {
@@ -16,16 +16,6 @@ namespace GameFramework.Input
             ActionAsset.Disable();
         }
 
-        public InputActionMap FindActionMap(string nameOrId)
-        {
-            return ActionAsset.FindActionMap(nameOrId, true);
-        }
-
-        public InputAction FindAction(string actionMapNameOrId, string actionNameOrId)
-        {
-            return FindActionMap(actionMapNameOrId)?.FindAction(actionNameOrId, true);
-        }
-
         public void EnableActionMap(string nameOrId)
         {
             FindActionMap(nameOrId)?.Enable();
@@ -34,6 +24,16 @@ namespace GameFramework.Input
         public void DisableActionMap(string nameOrId)
         {
             FindActionMap(nameOrId)?.Disable();
+        }
+
+        public InputActionMap FindActionMap(string nameOrId)
+        {
+            return ActionAsset.FindActionMap(nameOrId, true);
+        }
+
+        public InputAction FindAction(string actionMapNameOrId, string actionNameOrId)
+        {
+            return FindActionMap(actionMapNameOrId)?.FindAction(actionNameOrId, true);
         }
 
         public void SetCursorMode(InputCursorMode mode)

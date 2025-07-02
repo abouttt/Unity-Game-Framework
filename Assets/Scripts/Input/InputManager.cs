@@ -97,7 +97,7 @@ namespace GameFramework
                   .Start();
         }
 
-        public string GetBindingDisplayString(string actionMapNameOrId, string actionNameOrId, int bindingIndex = 0)
+        public string GetBindingDisplayString(string actionMapNameOrId, string actionNameOrId, int bindingIndex)
         {
             var action = FindAction(actionMapNameOrId, actionNameOrId);
             return IsValidBindingIndex(action, bindingIndex)
@@ -117,7 +117,7 @@ namespace GameFramework
 
             foreach (var binding in targetAction.actionMap.bindings)
             {
-                if (binding.action == targetBinding.action)
+                if (binding.Equals(targetBinding))
                 {
                     continue;
                 }
@@ -158,6 +158,7 @@ namespace GameFramework
                         if (action.bindings[i].hasOverrides)
                         {
                             action.RemoveBindingOverride(i);
+
                             var context = new BindingChangeContext
                             {
                                 ActionMap = actionMap,
@@ -165,6 +166,7 @@ namespace GameFramework
                                 BindingIndex = i,
                                 NewBindingPath = action.bindings[i].effectivePath
                             };
+
                             OnBindingChanged?.Invoke(context);
                         }
                     }

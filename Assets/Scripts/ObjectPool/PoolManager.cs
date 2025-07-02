@@ -8,7 +8,11 @@ namespace GameFramework
         private readonly Dictionary<string, ObjectPool> _pools = new();
 
         public void OnBind() { }
-        public void OnUnbind() { }
+
+        public void OnUnbind()
+        {
+            Clear();
+        }
 
         public void CreatePool(string key, GameObject prefab, int preloadCount = 0)
         {

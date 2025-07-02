@@ -3,44 +3,33 @@ using UnityEngine;
 
 namespace GameFramework
 {
-    public class ServiceBinding<T> where T : IService, new()
+    public class ServiceBinding<T> : IServiceBinding where T : IService
     {
-        private readonly ServiceLifetime _lifetime;
+        public ServiceLifetime Lifetime { get; }
+
         private readonly Func<T> _factory;
         private T _instance;
 
         public ServiceBinding(Func<T> factory, ServiceLifetime lifetime)
         {
             _factory = factory ?? throw new ArgumentNullException(nameof(factory));
-            _lifetime = lifetime;
+            Lifetime = lifetime;
 
-            if (_lifetime == ServiceLifetime.Singleton)
+            if (Lifetime == ServiceLifetime.Singleton)
             {
-                _instance = CreateInstance();
+                _instance = _factory();
             }
         }
 
-        public T GetInstance()
+        public object GetInstance()
         {
-            return _lifetime switch
+            return Lifetime switch
             {
                 ServiceLifetime.Singleton => _instance,
-                ServiceLifetime.Lazy => _instance ??= CreateInstance(),
-                ServiceLifetime.Transient => CreateInstance(),
-                _ => throw new NotSupportedException()
+                ServiceLifetime.Lazy => _instance ??= _factory(),
+                ServiceLifetime.Transient => _factory(),
+                _ => throw new NotSupportedException($"Lifetime {Lifetime} is not supported.")
             };
-        }
-
-        public void Unbind()
-        {
-            _instance?.OnUnbind();
-        }
-
-        private T CreateInstance()
-        {
-            var instance = _factory();
-            instance.OnBind();
-            return instance;
         }
     }
 }

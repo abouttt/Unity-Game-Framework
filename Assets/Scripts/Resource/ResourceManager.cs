@@ -12,16 +12,6 @@ namespace GameFramework
         private readonly Dictionary<string, Object> _resources = new();
         private readonly Dictionary<string, List<Action<Object>>> _pendingLoads = new();
 
-        public void OnBind()
-        {
-            Addressables.InitializeAsync();
-        }
-
-        public void OnUnbind()
-        {
-            Clear();
-        }
-
         public void LoadAsync<T>(string key, Action<T> callback = null) where T : Object
         {
             if (_resources.TryGetValue(key, out var resource))

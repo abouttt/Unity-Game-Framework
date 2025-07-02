@@ -6,82 +6,62 @@ namespace GameFramework
 {
     public static class ServiceLocator
     {
-        private static readonly Dictionary<Type, object> s_bindings = new();
-        private static readonly Dictionary<Type, Func<object>> s_binders = new();
-        private static readonly Dictionary<Type, Action> s_unbinders = new();
+        private static readonly Dictionary<Type, IServiceBinding> _bindings = new();
 
-        public static void Bind<T>(Func<T> factory, ServiceLifetime lifetime = ServiceLifetime.Singleton) where T : class, IService, new()
+        public static void Bind<T>(Func<T> factory, ServiceLifetime lifetime = ServiceLifetime.Singleton) where T : class, IService
         {
-            var type = typeof(T);
-            if (s_bindings.ContainsKey(type))
-            {
-                Debug.Log($"[ServiceLocator] {type} is already bound");
-                return;
-            }
-
-            var binding = new ServiceBinding<T>(factory, lifetime);
-            s_bindings[type] = binding;
-            s_binders[type] = () => binding.GetInstance();
-            s_unbinders[type] = () => binding.Unbind();
+            BindInternal(typeof(T), factory, lifetime);
         }
 
         public static void Bind<TInterface, TImpl>(Func<TImpl> factory, ServiceLifetime lifetime = ServiceLifetime.Singleton)
             where TInterface : class, IService
             where TImpl : class, TInterface, IService, new()
         {
-            var type = typeof(TInterface);
-            if (s_bindings.ContainsKey(type))
-            {
-                Debug.Log($"[ServiceLocator] {type} is already bound");
-                return;
-            }
+            BindInternal(typeof(TInterface), factory, lifetime);
+        }
 
-            var binding = new ServiceBinding<TImpl>(factory, lifetime);
-            s_bindings[type] = binding;
-            s_binders[type] = () => binding.GetInstance();
-            s_unbinders[type] = () => binding.Unbind();
+        public static void BindInstance<T>(T instance) where T : class, IService
+        {
+            BindInternal(typeof(T), () => instance, ServiceLifetime.Singleton);
         }
 
         public static T Get<T>() where T : class, IService
         {
             var type = typeof(T);
-            if (s_binders.TryGetValue(type, out var bind))
+            if (_bindings.TryGetValue(type, out var binding))
             {
-                return bind() as T;
+                return binding.GetInstance() as T;
             }
 
-            Debug.LogWarning($"[ServiceLocator] {type} is not bound");
-            return default;
+            Debug.LogWarning($"[ServiceLocator] {type} is not bound.");
+            return null;
         }
 
         public static void Unbind<T>() where T : IService, new()
         {
-            var type = typeof(T);
-            if (s_unbinders.TryGetValue(type, out var unbind))
-            {
-                unbind?.Invoke();
-            }
-
-            s_bindings.Remove(type);
-            s_binders.Remove(type);
-            s_unbinders.Remove(type);
+            _bindings.Remove(typeof(T));
         }
 
         public static bool IsBound<T>()
         {
-            return s_bindings.ContainsKey(typeof(T));
+            return _bindings.ContainsKey(typeof(T));
         }
 
         public static void Clear()
         {
-            foreach (var unbind in s_unbinders.Values)
+            _bindings.Clear();
+        }
+
+        private static void BindInternal<T>(Type type, Func<T> factory, ServiceLifetime lifetime) where T : class, IService
+        {
+            if (_bindings.ContainsKey(type))
             {
-                unbind?.Invoke();
+                Debug.LogWarning($"[ServiceLocator] Service of type {type.Name} is already bound.");
+                return;
             }
 
-            s_bindings.Clear();
-            s_binders.Clear();
-            s_unbinders.Clear();
+            var binding = new ServiceBinding<T>(factory, lifetime);
+            _bindings[type] = binding;
         }
     }
 }

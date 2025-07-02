@@ -17,9 +17,6 @@ namespace GameFramework
             _inputActions.Disable();
         }
 
-        public void OnBind() { }
-        public void OnUnbind() { }
-
         public void SetCursorMode(InputCursorMode mode)
         {
             Cursor.visible = mode != InputCursorMode.Locked;

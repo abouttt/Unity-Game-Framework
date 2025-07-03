@@ -53,8 +53,15 @@ namespace GameFramework
             return null;
         }
 
-        public bool Return(string key, PoolObject poolObj)
+        public bool Return(PoolObject poolObj)
         {
+            if (poolObj == null || !poolObj.IsUsing)
+            {
+                return false;
+            }
+
+            var key = poolObj.PoolKey;
+
             if (_pools.TryGetValue(key, out var pool))
             {
                 if (pool.Return(poolObj))
@@ -102,6 +109,28 @@ namespace GameFramework
         public bool HasPool(string key)
         {
             return _pools.ContainsKey(key);
+        }
+
+        public int GetActiveCount(string key)
+        {
+            if (_pools.TryGetValue(key, out var pool))
+            {
+                return pool.ActiveCount;
+            }
+
+            Debug.LogWarning($"[PoolManager] Pool with key '{key}' does not exist.");
+            return 0;
+        }
+
+        public int GetInactiveCount(string key)
+        {
+            if (_pools.TryGetValue(key, out var pool))
+            {
+                return pool.InactiveCount;
+            }
+
+            Debug.LogWarning($"[PoolManager] Pool with key '{key}' does not exist.");
+            return 0;
         }
 
         public void Clear()

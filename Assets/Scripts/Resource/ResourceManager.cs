@@ -9,45 +9,43 @@ namespace GameFramework
 {
     public sealed class ResourceManager : IService
     {
-        private readonly Dictionary<string, Object> _resources = new();
+        private readonly Dictionary<string, AsyncOperationHandle> _assetHandles = new();
         private readonly Dictionary<string, List<Action<Object>>> _pendingLoads = new();
 
         public void LoadAsync<T>(string key, Action<T> callback = null) where T : Object
         {
-            if (_resources.TryGetValue(key, out var resource))
+            if (_assetHandles.TryGetValue(key, out var completedHandle))
             {
-                callback?.Invoke(resource as T);
+                callback?.Invoke(completedHandle.Result as T);
                 return;
             }
 
-            if (callback != null)
+            if (_pendingLoads.TryGetValue(key, out var pendingList))
             {
-                if (_pendingLoads.ContainsKey(key))
-                {
-                    _pendingLoads[key].Add(obj => callback?.Invoke(obj as T));
-                    return;
-                }
-
-                _pendingLoads[key] = new() { obj => callback?.Invoke(obj as T) };
+                pendingList.Add(obj => callback?.Invoke(obj as T));
+                return;
             }
+
+            _pendingLoads[key] = new() { obj => callback?.Invoke(obj as T) };
 
             Addressables.LoadAssetAsync<T>(key).Completed += handle =>
             {
                 if (handle.Status == AsyncOperationStatus.Succeeded)
                 {
-                    if (_resources.ContainsKey(key))
+                    if (_assetHandles.ContainsKey(key))
                     {
+                        Debug.LogWarning($"[ResourceManager] Resource already exists for key: {key}");
                         Addressables.Release(handle);
-                        Debug.LogWarning($"[ResourceManager] Resource already exists for key: {key}, releasing old resource.");
                     }
                     else
                     {
-                        _resources[key] = handle.Result;
+                        _assetHandles[key] = handle;
                     }
                 }
                 else
                 {
                     Debug.LogWarning($"[ResourceManager] Failed to load resource with key: {key}");
+                    Addressables.Release(handle);
                 }
 
                 if (_pendingLoads.TryGetValue(key, out var callbacks))
@@ -113,10 +111,10 @@ namespace GameFramework
 
         public void Release(string key)
         {
-            if (_resources.TryGetValue(key, out var resource))
+            if (_assetHandles.TryGetValue(key, out var handle))
             {
-                Addressables.Release(resource);
-                _resources.Remove(key);
+                _assetHandles.Remove(key);
+                Addressables.Release(handle);
             }
             else
             {
@@ -126,17 +124,17 @@ namespace GameFramework
 
         public bool IsLoaded(string key)
         {
-            return _resources.ContainsKey(key);
+            return _assetHandles.ContainsKey(key);
         }
 
         public void Clear()
         {
-            foreach (var resource in _resources.Values)
+            foreach (var handle in _assetHandles.Values)
             {
-                Addressables.Release(resource);
+                Addressables.Release(handle);
             }
 
-            _resources.Clear();
+            _assetHandles.Clear();
             _pendingLoads.Clear();
         }
     }
